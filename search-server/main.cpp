@@ -110,122 +110,56 @@ class SearchServer {
     template<typename Criteria>
     Documents FindTopDocuments(const string& raw_query, Criteria criteria) const {
         const Query kQuery = ParseQuery(raw_query);
-        auto matched_documents = FindAllDocuments(kQuery, criteria);
 
+        auto matched_documents = FindAllDocuments(kQuery, criteria);
         sort(matched_documents.begin(), matched_documents.end());
         CutDocuments(matched_documents);
 
         return matched_documents;
     }
 
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
-        const auto ByStatus = [&status](int document_id, DocumentStatus document_status, int rating) {
-          return document_status == status;
-        };
-        return FindTopDocuments(raw_query, ByStatus);
-    }
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const;
 
-    vector<Document> FindTopDocuments(const string& raw_query) const {
-        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
-    }
+    vector<Document> FindTopDocuments(const string& raw_query) const;
 
-    auto GetDocumentCount() const {
-        return documents_.size();
-    }
+    size_t GetDocumentCount() const;
 
-    tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
-        const Query kQuery = ParseQuery(raw_query);
-        vector<string> matched_words;
-        for (const string& word : kQuery.GetPlusWords()) {
-            if (word_to_document_freqs_.count(word) == 0U) {
-                continue;
-            }
-            if (word_to_document_freqs_.at(word).count(document_id) == 1U) {
-                matched_words.push_back(word);
-            }
-        }
-        for (const string& word : kQuery.GetMinusWords()) {
-            if (word_to_document_freqs_.count(word) == 0U) {
-                continue;
-            }
-            if (word_to_document_freqs_.at(word).count(document_id) == 1U) {
-                matched_words.clear();
-                break;
-            }
-        }
-        return {matched_words, documents_.at(document_id).GetStatus()};
-    }
+    tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const;
 
   private:
     class DocumentData {
       public:
-        DocumentData(int rating, DocumentStatus status)
-            : rating_(rating)
-              , status_(status) {}
+        DocumentData(int rating, DocumentStatus status);
 
       public:
-        int GetRating() const {
-            return rating_;
-        }
+        int GetRating() const;
 
-        DocumentStatus GetStatus() const {
-            return status_;
-        }
+        DocumentStatus GetStatus() const;
 
       private:
         int rating_;
         DocumentStatus status_;
     };
 
-    set<string> stop_words_;
-    map<string, map<int, double>> word_to_document_freqs_;
-    map<int, DocumentData> documents_;
-
-    bool IsStopWord(const string& word) const {
-        return stop_words_.count(word) > 0U;
-    }
-
   private:
+    bool IsStopWord(const string& word) const;
+
     static void CutDocuments(Documents& documents);
 
-    vector<string> SplitIntoWordsNoStop(const string& text) const {
-        vector<string> words;
-        for (const string& word : helpers::SplitIntoWords(text)) {
-            if (!IsStopWord(word)) {
-                words.push_back(word);
-            }
-        }
-        return words;
-    }
+    vector<string> SplitIntoWordsNoStop(const string& text) const;
 
-    static int ComputeAverageRating(const vector<int>& ratings) {
-        if (ratings.empty()) {
-            return 0;
-        }
-        int rating_sum = 0;
-        for (const int kRating : ratings) {
-            rating_sum += kRating;
-        }
-        return rating_sum / static_cast<int>(ratings.size());
-    }
+    static int ComputeAverageRating(const vector<int>& ratings);
 
     class QueryWord {
       public:
-        QueryWord(const string& data, bool is_minus, bool is_stop)
-            : data_(data), is_minus_(is_minus), is_stop_(is_stop) {}
+        QueryWord(const string& data, bool is_minus, bool is_stop);
 
       public:
-        const string& GetData() const {
-            return data_;
-        }
+        const string& GetData() const;
 
-        bool IsMinus() const {
-            return is_minus_;
-        }
+        bool IsMinus() const;
 
-        bool IsStop() const {
-            return is_stop_;
-        }
+        bool IsStop() const;
 
       private:
         string data_;
@@ -233,15 +167,7 @@ class SearchServer {
         bool is_stop_;
     };
 
-    auto ParseQueryWord(string text) const {
-        bool is_minus = false;
-        // Word shouldn't be empty
-        if (text[0U] == '-') {
-            is_minus = true;
-            text = text.substr(1U);
-        }
-        return QueryWord{text, is_minus, IsStopWord(text)};
-    }
+    QueryWord ParseQueryWord(string text) const;
 
     class Query {
       public:
@@ -266,56 +192,33 @@ class SearchServer {
         set<string> minus_words_;
     };
 
-    Query ParseQuery(const string& text) const {
-        Query query;
-        for (const string& word : helpers::SplitIntoWords(text)) {
-            const QueryWord kQueryWord = ParseQueryWord(word);
-            if (!kQueryWord.IsStop()) {
-                if (kQueryWord.IsMinus()) {
-                    query.GetMinusWords().insert(kQueryWord.GetData());
-                } else {
-                    query.GetPlusWords().insert(kQueryWord.GetData());
-                }
-            }
-        }
-        return query;
-    }
+    Query ParseQuery(const string& text) const;
 
     // Existence required
-    double ComputeWordInverseDocumentFreq(const string& word) const {
-        return log(static_cast<double>(GetDocumentCount())
-                       / static_cast<double >(word_to_document_freqs_.at(word).size()));
+    double ComputeWordInverseDocumentFreq(const string& word) const;
 
-    }
-
-    template<typename DocumentPredicate>
+    template<typename Criteria>
     vector<Document> FindAllDocuments(const Query& query,
-                                      DocumentPredicate document_predicate) const {
+                                      Criteria criteria) const {
         map<int, double> document_to_relevance;
         for (const string& word : query.GetPlusWords()) {
-            if (word_to_document_freqs_.count(word) == 0U) {
+            if (inverted_index_.count(word) == 0U) {
                 continue;
             }
-            const double
-                kInverseDocumentFreq = ComputeWordInverseDocumentFreq(word);
-            for (const auto[kDocumentId, kTermFreq] : word_to_document_freqs_.at(
-                word)) {
-                const auto& document_data = documents_.at(kDocumentId);
-                if (document_predicate(kDocumentId,
-                                       document_data.GetStatus(),
-                                       document_data.GetRating())) {
-                    document_to_relevance[kDocumentId] +=
-                        kTermFreq * kInverseDocumentFreq;
+            const double kInverseDocumentFreq = ComputeWordInverseDocumentFreq(word);
+            for (const auto[kDocumentId, kTermFreq] : inverted_index_.at(word)) {
+                const auto& kDocumentData = storage_.at(kDocumentId);
+                if (criteria(kDocumentId, kDocumentData.GetStatus(), kDocumentData.GetRating())) {
+                    document_to_relevance[kDocumentId] += kTermFreq * kInverseDocumentFreq;
                 }
             }
         }
 
         for (const string& word : query.GetMinusWords()) {
-            if (word_to_document_freqs_.count(word) == 0U) {
-                continue;
-            }
-            for (const auto[kDocumentId, _] : word_to_document_freqs_.at(word)) {
-                document_to_relevance.erase(kDocumentId);
+            if (inverted_index_.count(word) == 1U) {
+                for (const auto[kDocumentId, _] : inverted_index_.at(word)) {
+                    document_to_relevance.erase(kDocumentId);
+                }
             }
         }
 
@@ -325,12 +228,49 @@ class SearchServer {
             matched_documents.emplace_back(
                 kDocumentId,
                 kRelevance,
-                documents_.at(kDocumentId).GetRating()
+                storage_.at(kDocumentId).GetRating()
             );
         }
         return matched_documents;
     }
+
+  private:
+    set<string> stop_words_;
+    map<string, map<int, double>> inverted_index_;
+    map<int, DocumentData> storage_;
 };
+
+SearchServer::QueryWord::QueryWord(const string& data, bool is_minus, bool is_stop)
+    : data_(data), is_minus_(is_minus), is_stop_(is_stop) {
+
+}
+
+const string& SearchServer::QueryWord::GetData() const {
+    return data_;
+}
+
+bool SearchServer::QueryWord::IsMinus() const {
+    return is_minus_;
+}
+
+bool SearchServer::QueryWord::IsStop() const {
+    return is_stop_;
+}
+// class Search Server
+
+SearchServer::DocumentData::DocumentData(int rating, DocumentStatus status)
+    : rating_(rating), status_(status) {
+
+}
+
+int SearchServer::DocumentData::GetRating() const {
+    return rating_;
+
+}
+
+DocumentStatus SearchServer::DocumentData::GetStatus() const {
+    return status_;
+}
 
 void SearchServer::SetStopWords(const string& text) {
     for (const string& word : helpers::SplitIntoWords(text)) {
@@ -345,10 +285,10 @@ void SearchServer::AddDocument(int document_id,
     const vector<string> kWords = SplitIntoWordsNoStop(document);
     const double kInvWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const string& word : kWords) {
-        word_to_document_freqs_[word][document_id] += kInvWordCount;
+        inverted_index_[word][document_id] += kInvWordCount;
     }
-    documents_.emplace(document_id,
-                       DocumentData{
+    storage_.emplace(document_id,
+                     DocumentData{
                            ComputeAverageRating(ratings),
                            status
                        });
@@ -358,6 +298,100 @@ void SearchServer::CutDocuments(Documents& documents) {
     if (documents.size() > kMaxResultDocumentCount) {
         documents.resize(kMaxResultDocumentCount);
     }
+}
+
+vector<Document> SearchServer::FindTopDocuments(const string& raw_query, DocumentStatus status) const {
+    const auto ByStatus = [&status](int document_id, DocumentStatus document_status, int rating) {
+      return document_status == status;
+    };
+    return FindTopDocuments(raw_query, ByStatus);
+}
+
+vector<Document> SearchServer::FindTopDocuments(const string& raw_query) const {
+    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
+}
+
+tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& raw_query, int document_id) const {
+    const Query kQuery = ParseQuery(raw_query);
+    vector<string> matched_words;
+
+    for (const string& word : kQuery.GetPlusWords()) {
+        if (inverted_index_.count(word) == 0U) {
+            continue;
+        }
+        if (inverted_index_.at(word).count(document_id) == 1U) {
+            matched_words.push_back(word);
+        }
+    }
+    for (const string& word : kQuery.GetMinusWords()) {
+        if (inverted_index_.count(word) == 0U) {
+            continue;
+        }
+        if (inverted_index_.at(word).count(document_id) == 1U) {
+            matched_words.clear();
+            break;
+        }
+    }
+    return {matched_words, storage_.at(document_id).GetStatus()};
+
+}
+
+size_t SearchServer::GetDocumentCount() const {
+    return storage_.size();
+}
+
+bool SearchServer::IsStopWord(const string& word) const {
+    return stop_words_.count(word) > 0U;
+}
+
+vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {
+    vector<string> words;
+    for (const string& word : helpers::SplitIntoWords(text)) {
+        if (!IsStopWord(word)) {
+            words.push_back(word);
+        }
+    }
+    return words;
+}
+
+int SearchServer::ComputeAverageRating(const vector<int>& ratings) {
+    if (ratings.empty()) {
+        return 0;
+    }
+    int rating_sum = 0;
+    for (const int kRating : ratings) {
+        rating_sum += kRating;
+    }
+    return rating_sum / static_cast<int>(ratings.size());
+}
+
+SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
+    bool is_minus = false;
+    // Word shouldn't be empty
+    if (text[0U] == '-') {
+        is_minus = true;
+        text = text.substr(1U);
+    }
+    return QueryWord{text, is_minus, IsStopWord(text)};
+}
+
+SearchServer::Query SearchServer::ParseQuery(const string& text) const {
+    Query query;
+    for (const string& word : helpers::SplitIntoWords(text)) {
+        const QueryWord kQueryWord = ParseQueryWord(word);
+        if (!kQueryWord.IsStop()) {
+            if (kQueryWord.IsMinus()) {
+                query.GetMinusWords().insert(kQueryWord.GetData());
+            } else {
+                query.GetPlusWords().insert(kQueryWord.GetData());
+            }
+        }
+    }
+    return query;
+}
+
+double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
+    return log(static_cast<double>(GetDocumentCount()) / static_cast<double >(inverted_index_.at(word).size()));
 }
 
 void PrintDocument(const Document& document) {
