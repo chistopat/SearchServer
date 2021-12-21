@@ -10,10 +10,6 @@
 
 using namespace std;
 
-namespace praktikum {
-
-static constexpr auto kEpsilon = 1e-6;
-
 namespace helpers {
 
 string ReadLine(std::istream& in = std::cin) {
@@ -51,6 +47,8 @@ vector<string> SplitIntoWords(const string& text) {
 }
 } // namespace helpers
 
+static constexpr auto kEpsilon = 1e-6;
+
 class Document {
   public:
     Document() = default;
@@ -66,41 +64,41 @@ class Document {
 
     friend ostream& operator<<(ostream& os, const Document& document);
 
-  private:
-    int id_ = 0;
-    double relevance_ = 0.;
-    int rating_ = 0;
+  public: // not private for compatibility with testing system
+    int id = 0;
+    double relevance = 0.;
+    int rating = 0;
 };
 
 Document::Document(int id, double relevance, int rating)
-    : id_(id), relevance_(relevance), rating_(rating) {}
+    : id(id), relevance(relevance), rating(rating) {}
 
 int Document::GetId() const {
-    return id_;
+    return id;
 }
 
 int Document::GetRating() const {
-    return rating_;
+    return rating;
 }
 
 double Document::GetRelevance() const {
-    return relevance_;
+    return relevance;
 }
 
 ostream& operator<<(ostream& os, const Document& document) {
     os << "{ "s
-         << "document_id = "s << document.GetId() << ", "s
-         << "relevance = "s << document.GetRelevance() << ", "s
-         << "rating = "s << document.GetRating()
-         << " }"s;
+       << "document_id = "s << document.GetId() << ", "s
+       << "relevance = "s << document.GetRelevance() << ", "s
+       << "rating = "s << document.GetRating()
+       << " }"s;
     return os;
 }
 
 bool operator<(const Document& left, const Document& right) {
     if (abs(left.GetRelevance() - right.GetRelevance()) < kEpsilon) {
-        return left.GetRating() > left.GetRating();
+        return left.GetRating() > right.GetRating();
     }
-    return left.GetRelevance() > left.GetRelevance();
+    return left.GetRelevance() > right.GetRelevance();
 }
 
 enum class DocumentStatus {
@@ -405,16 +403,16 @@ double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
 }
 
 vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to_relevance) const {
-        vector<Document> documents;
-        documents.reserve(document_to_relevance.size());
+    vector<Document> documents;
+    documents.reserve(document_to_relevance.size());
 
-        for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
-            documents.emplace_back(
-                kDocumentId,
-                kRelevance,
-                storage_.at(kDocumentId).GetRating()
-            );
-        }
+    for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
+        documents.emplace_back(
+            kDocumentId,
+            kRelevance,
+            storage_.at(kDocumentId).GetRating()
+        );
+    }
 
     return documents;
 }
@@ -440,7 +438,6 @@ void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int docum
     }
 }
 
-
 [[maybe_unused]] void PrintDocument(const Document& document) {
     cout << document << endl;
 }
@@ -465,7 +462,7 @@ void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int docum
             cin >> rating;
         }
 
-        search_server.AddDocument(document_id,kDocument,static_cast<DocumentStatus>(status_raw), ratings);
+        search_server.AddDocument(document_id, kDocument, static_cast<DocumentStatus>(status_raw), ratings);
         helpers::ReadLine();
     }
 
@@ -482,11 +479,24 @@ void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int docum
     }
     cout << "}"s << endl;
 }
-} // namespace praktikum
 
 int main() {
-    using namespace praktikum;
-    const auto server = CreateSearchServer();
+    using namespace helpers;
+    const SearchServer search_server = CreateSearchServer();
+
+    const string query = ReadLine();
+
+    cout << "Top documents for query:"s << endl;
+    for (const Document& document : search_server.FindTopDocuments(query)) {
+        PrintDocument(document);
+    }
+
+    cout << "Documents' statuses:"s << endl;
+    const int document_count = static_cast<int>(search_server.GetDocumentCount());
+    for (int document_id = 0; document_id < document_count; ++document_id) {
+        const auto[words, status] = search_server.MatchDocument(query, document_id);
+        PrintMatchDocumentResult(static_cast<int>(document_id), words, status);
+    }
 
     return 0;
 }
