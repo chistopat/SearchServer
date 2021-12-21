@@ -11,6 +11,9 @@
 using namespace std;
 
 namespace praktikum {
+
+static constexpr auto kEpsilon = 1e-6;
+
 namespace helpers {
 
 string ReadLine(std::istream& in = std::cin) {
@@ -48,17 +51,20 @@ vector<string> SplitIntoWords(const string& text) {
 }
 } // namespace helpers
 
-static constexpr auto kEpsilon = 1e-6;
-
 class Document {
   public:
     Document() = default;
+
     Document(int id, double relevance, int rating);
 
   public:
     int GetId() const;
+
     double GetRelevance() const;
+
     int GetRating() const;
+
+    friend ostream& operator<<(ostream& os, const Document& document);
 
   private:
     int id_ = 0;
@@ -81,6 +87,15 @@ double Document::GetRelevance() const {
     return relevance_;
 }
 
+ostream& operator<<(ostream& os, const Document& document) {
+    os << "{ "s
+         << "document_id = "s << document.GetId() << ", "s
+         << "relevance = "s << document.GetRelevance() << ", "s
+         << "rating = "s << document.GetRating()
+         << " }"s;
+    return os;
+}
+
 bool operator<(const Document& left, const Document& right) {
     if (abs(left.GetRelevance() - right.GetRelevance()) < kEpsilon) {
         return left.GetRating() > left.GetRating();
@@ -101,6 +116,7 @@ class SearchServer {
 
   public:
     static constexpr auto kMaxResultDocumentCount = 5U;
+    static constexpr auto kMinusWordPrefix = '-';
 
   public:
     void SetStopWords(const string& text);
@@ -141,15 +157,6 @@ class SearchServer {
         DocumentStatus status_;
     };
 
-  private:
-    bool IsStopWord(const string& word) const;
-
-    static void CutDocuments(Documents& documents);
-
-    vector<string> SplitIntoWordsNoStop(const string& text) const;
-
-    static int ComputeAverageRating(const vector<int>& ratings);
-
     class QueryWord {
       public:
         QueryWord(const string& data, bool is_minus, bool is_stop);
@@ -171,26 +178,31 @@ class SearchServer {
 
     class Query {
       public:
-        const set<string>& GetPlusWords() const {
-            return plus_words_;
-        }
+        const set<string>& GetPlusWords() const;
 
-        const set<string>& GetMinusWords() const {
-            return minus_words_;
-        }
+        set<string>& GetPlusWords();
 
-        set<string>& GetPlusWords() {
-            return plus_words_;
-        }
+        const set<string>& GetMinusWords() const;
 
-        set<string>& GetMinusWords() {
-            return minus_words_;
-        }
+        set<string>& GetMinusWords();
 
       private:
         set<string> plus_words_;
         set<string> minus_words_;
     };
+
+  private:
+    bool IsStopWord(const string& word) const;
+
+    static void CutDocuments(Documents& documents);
+
+    vector<string> SplitIntoWordsNoStop(const string& text) const;
+
+    static int ComputeAverageRating(const vector<int>& ratings);
+
+    void MatchByPlusWords(const Query& query, int document_id, vector<string>& matched) const;
+
+    void MatchByMinusWords(const Query& query, int document_id, vector<string>& matched) const;
 
     Query ParseQuery(const string& text) const;
 
@@ -198,9 +210,17 @@ class SearchServer {
     double ComputeWordInverseDocumentFreq(const string& word) const;
 
     template<typename Criteria>
-    vector<Document> FindAllDocuments(const Query& query,
-                                      Criteria criteria) const {
+    vector<Document> FindAllDocuments(const Query& query, Criteria criteria) const {
         map<int, double> document_to_relevance;
+
+        RetrieveByPlusWords(document_to_relevance, query, criteria);
+        FilterByMinusWords(document_to_relevance, query, criteria);
+
+        return MakeDocuments(document_to_relevance);
+    }
+
+    template<typename Criteria, typename K = int, typename V = double>
+    void RetrieveByPlusWords(map<K, V>& relevance_map, const Query& query, Criteria criteria) const {
         for (const string& word : query.GetPlusWords()) {
             if (inverted_index_.count(word) == 0U) {
                 continue;
@@ -209,36 +229,46 @@ class SearchServer {
             for (const auto[kDocumentId, kTermFreq] : inverted_index_.at(word)) {
                 const auto& kDocumentData = storage_.at(kDocumentId);
                 if (criteria(kDocumentId, kDocumentData.GetStatus(), kDocumentData.GetRating())) {
-                    document_to_relevance[kDocumentId] += kTermFreq * kInverseDocumentFreq;
+                    relevance_map[kDocumentId] += kTermFreq * kInverseDocumentFreq;
                 }
             }
         }
+    }
 
+    template<typename Criteria, typename K = int, typename V = double>
+    void FilterByMinusWords(map<K, V>& relevance_map, const Query& query, Criteria criteria) const {
         for (const string& word : query.GetMinusWords()) {
             if (inverted_index_.count(word) == 1U) {
                 for (const auto[kDocumentId, _] : inverted_index_.at(word)) {
-                    document_to_relevance.erase(kDocumentId);
+                    relevance_map.erase(kDocumentId);
                 }
             }
         }
-
-        vector<Document> matched_documents;
-        matched_documents.reserve(document_to_relevance.size());
-        for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
-            matched_documents.emplace_back(
-                kDocumentId,
-                kRelevance,
-                storage_.at(kDocumentId).GetRating()
-            );
-        }
-        return matched_documents;
     }
+
+    vector<Document> MakeDocuments(const map<int, double>& document_to_relevance) const;
 
   private:
     set<string> stop_words_;
     map<string, map<int, double>> inverted_index_;
     map<int, DocumentData> storage_;
 };
+
+const set<string>& SearchServer::Query::GetPlusWords() const {
+    return plus_words_;
+}
+
+set<string>& SearchServer::Query::GetPlusWords() {
+    return plus_words_;
+}
+
+const set<string>& SearchServer::Query::GetMinusWords() const {
+    return minus_words_;
+}
+
+set<string>& SearchServer::Query::GetMinusWords() {
+    return minus_words_;
+}
 
 SearchServer::QueryWord::QueryWord(const string& data, bool is_minus, bool is_stop)
     : data_(data), is_minus_(is_minus), is_stop_(is_stop) {
@@ -256,7 +286,6 @@ bool SearchServer::QueryWord::IsMinus() const {
 bool SearchServer::QueryWord::IsStop() const {
     return is_stop_;
 }
-// class Search Server
 
 SearchServer::DocumentData::DocumentData(int rating, DocumentStatus status)
     : rating_(rating), status_(status) {
@@ -278,20 +307,15 @@ void SearchServer::SetStopWords(const string& text) {
     }
 }
 
-void SearchServer::AddDocument(int document_id,
-                               const string& document,
-                               DocumentStatus status,
+void SearchServer::AddDocument(int document_id, const string& document, DocumentStatus status,
                                const vector<int>& ratings) {
     const vector<string> kWords = SplitIntoWordsNoStop(document);
     const double kInvWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const string& word : kWords) {
         inverted_index_[word][document_id] += kInvWordCount;
     }
-    storage_.emplace(document_id,
-                     DocumentData{
-                           ComputeAverageRating(ratings),
-                           status
-                       });
+
+    storage_.insert({document_id, DocumentData{ComputeAverageRating(ratings), status}});
 }
 
 void SearchServer::CutDocuments(Documents& documents) {
@@ -315,23 +339,9 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& 
     const Query kQuery = ParseQuery(raw_query);
     vector<string> matched_words;
 
-    for (const string& word : kQuery.GetPlusWords()) {
-        if (inverted_index_.count(word) == 0U) {
-            continue;
-        }
-        if (inverted_index_.at(word).count(document_id) == 1U) {
-            matched_words.push_back(word);
-        }
-    }
-    for (const string& word : kQuery.GetMinusWords()) {
-        if (inverted_index_.count(word) == 0U) {
-            continue;
-        }
-        if (inverted_index_.at(word).count(document_id) == 1U) {
-            matched_words.clear();
-            break;
-        }
-    }
+    MatchByPlusWords(kQuery, document_id, matched_words);
+    MatchByMinusWords(kQuery, document_id, matched_words);
+
     return {matched_words, storage_.at(document_id).GetStatus()};
 
 }
@@ -368,7 +378,7 @@ int SearchServer::ComputeAverageRating(const vector<int>& ratings) {
 SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
     bool is_minus = false;
     // Word shouldn't be empty
-    if (text[0U] == '-') {
+    if (text[0U] == kMinusWordPrefix) {
         is_minus = true;
         text = text.substr(1U);
     }
@@ -394,15 +404,48 @@ double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
     return log(static_cast<double>(GetDocumentCount()) / static_cast<double >(inverted_index_.at(word).size()));
 }
 
-void PrintDocument(const Document& document) {
-    cout << "{ "s
-         << "document_id = "s << document.GetId() << ", "s
-         << "relevance = "s << document.GetRelevance() << ", "s
-         << "rating = "s << document.GetRating()
-         << " }"s << endl;
+vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to_relevance) const {
+        vector<Document> documents;
+        documents.reserve(document_to_relevance.size());
+
+        for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
+            documents.emplace_back(
+                kDocumentId,
+                kRelevance,
+                storage_.at(kDocumentId).GetRating()
+            );
+        }
+
+    return documents;
 }
 
-SearchServer CreateSearchServer() {
+void SearchServer::MatchByPlusWords(const SearchServer::Query& query, int document_id, vector<string>& matched) const {
+    for (const string& word : query.GetPlusWords()) {
+        if (inverted_index_.count(word) == 1U) {
+            if (inverted_index_.at(word).count(document_id) == 1U) {
+                matched.push_back(word);
+            }
+        }
+    }
+}
+
+void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int document_id, vector<string>& matched) const {
+    for (const string& word : query.GetMinusWords()) {
+        if (inverted_index_.count(word) == 1U) {
+            if (inverted_index_.at(word).count(document_id) == 1U) {
+                matched.clear();
+                break;
+            }
+        }
+    }
+}
+
+
+[[maybe_unused]] void PrintDocument(const Document& document) {
+    cout << document << endl;
+}
+
+[[maybe_unused]] SearchServer CreateSearchServer() {
     SearchServer search_server;
     search_server.SetStopWords(helpers::ReadLine());
 
@@ -418,23 +461,18 @@ SearchServer CreateSearchServer() {
 
         vector<int> ratings(ratings_size, 0);
 
-        for (int& rating : ratings) {
+        for (auto& rating : ratings) {
             cin >> rating;
         }
 
-        search_server.AddDocument(document_id,
-                                  kDocument,
-                                  static_cast<DocumentStatus>(status_raw),
-                                  ratings);
+        search_server.AddDocument(document_id,kDocument,static_cast<DocumentStatus>(status_raw), ratings);
         helpers::ReadLine();
     }
 
     return search_server;
 }
 
-void PrintMatchDocumentResult(int document_id,
-                              const vector<string>& words,
-                              DocumentStatus status) {
+[[maybe_unused]] void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
     cout << "{ "s
          << "document_id = "s << document_id << ", "s
          << "status = "s << static_cast<int>(status) << ", "s
@@ -448,49 +486,7 @@ void PrintMatchDocumentResult(int document_id,
 
 int main() {
     using namespace praktikum;
-    SearchServer search_server;
-    search_server.SetStopWords("и в на"s);
-
-    search_server.AddDocument(0,
-                              "белый кот и модный ошейник"s,
-                              DocumentStatus::ACTUAL,
-                              {8, -3});
-    search_server.AddDocument(1,
-                              "пушистый кот пушистый хвост"s,
-                              DocumentStatus::ACTUAL,
-                              {7, 2, 7});
-    search_server.AddDocument(2,
-                              "ухоженный пёс выразительные глаза"s,
-                              DocumentStatus::ACTUAL,
-                              {5, -12, 2, 1});
-    search_server.AddDocument(3,
-                              "ухоженный скворец евгений"s,
-                              DocumentStatus::BANNED,
-                              {9});
-    search_server.AddDocument(4, "something"s, DocumentStatus::REMOVED, {9});
-    search_server.AddDocument(5, "nothing"s, DocumentStatus::IRRELEVANT, {0});
-
-    cout << "ACTUAL by default:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments(
-        "пушистый ухоженный кот"s)) {
-        PrintDocument(document);
-    }
-
-    cout << "BANNED:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments(
-        "пушистый ухоженный кот"s,
-        DocumentStatus::BANNED)) {
-        PrintDocument(document);
-    }
-
-    cout << "Even ids:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments(
-        "пушистый ухоженный кот"s,
-        [](int document_id,
-           DocumentStatus status,
-           int rating) { return document_id % 2 == 0; })) {
-        PrintDocument(document);
-    }
+    const auto server = CreateSearchServer();
 
     return 0;
 }
