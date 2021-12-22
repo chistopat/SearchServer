@@ -113,7 +113,7 @@ class SearchServer {
     using Documents = vector<Document>;
 
   public:
-    static constexpr auto kMaxResultDocumentCount = 5U;
+    static constexpr auto kMaxResultDocumentSize = 5U;
     static constexpr auto kMinusWordPrefix = '-';
 
   public:
@@ -204,7 +204,6 @@ class SearchServer {
 
     Query ParseQuery(const string& text) const;
 
-    // Existence required
     double ComputeWordInverseDocumentFreq(const string& word) const;
 
     template<typename Criteria>
@@ -308,17 +307,17 @@ void SearchServer::SetStopWords(const string& text) {
 void SearchServer::AddDocument(int document_id, const string& document, DocumentStatus status,
                                const vector<int>& ratings) {
     const vector<string> kWords = SplitIntoWordsNoStop(document);
-    const double kInvWordCount = 1.0 / static_cast<double>(kWords.size());
+    const double kInvertedWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const string& word : kWords) {
-        inverted_index_[word][document_id] += kInvWordCount;
+        inverted_index_[word][document_id] += kInvertedWordCount;
     }
 
     storage_.insert({document_id, DocumentData{ComputeAverageRating(ratings), status}});
 }
 
 void SearchServer::CutDocuments(Documents& documents) {
-    if (documents.size() > kMaxResultDocumentCount) {
-        documents.resize(kMaxResultDocumentCount);
+    if (documents.size() > kMaxResultDocumentSize) {
+        documents.resize(kMaxResultDocumentSize);
     }
 }
 
@@ -399,7 +398,7 @@ SearchServer::Query SearchServer::ParseQuery(const string& text) const {
 }
 
 double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
-    return log(static_cast<double>(GetDocumentCount()) / static_cast<double >(inverted_index_.at(word).size()));
+    return log(static_cast<double>(GetDocumentCount()) / static_cast<double>(inverted_index_.at(word).size()));
 }
 
 vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to_relevance) const {
