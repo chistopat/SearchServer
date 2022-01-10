@@ -12,14 +12,13 @@
 
 using namespace std;
 
-
 namespace testing {
-template <typename Key, typename Value>
+template<typename Key, typename Value>
 std::ostream& operator<<(std::ostream& output_stream, const std::pair<Key, Value>& container) {
     return output_stream << container.first << ": "s << container.second;
 }
 
-template <typename Container>
+template<typename Container>
 std::ostream& PrintContainer(std::ostream& output_stream, const Container& container, std::string&& prefix,
                              std::string&& suffix, std::string&& delimiter = ", "s) {
     using namespace std::experimental;
@@ -30,22 +29,22 @@ std::ostream& PrintContainer(std::ostream& output_stream, const Container& conta
     return output_stream << suffix;
 }
 
-template <typename Type>
+template<typename Type>
 std::ostream& operator<<(std::ostream& output_stream, const std::vector<Type>& container) {
     return PrintContainer(output_stream, container, "["s, "]"s);
 }
 
-template <typename Type>
+template<typename Type>
 std::ostream& operator<<(std::ostream& output_stream, const std::set<Type>& container) {
     return PrintContainer(output_stream, container, "{"s, "}"s);
 }
 
-template <typename Key, typename Value>
+template<typename Key, typename Value>
 std::ostream& operator<<(std::ostream& output_stream, const std::map<Key, Value>& container) {
     return PrintContainer(output_stream, container, "{"s, "}"s);
 }
 
-template <typename Actual, typename Expected>
+template<typename Actual, typename Expected>
 void AssertEqual(const Actual& actual, const Expected& expected,
                  const string& actual_string, const string& expected_string, const string& file,
                  const string& function, unsigned line, const string& hint) {
@@ -67,7 +66,7 @@ void Assert(bool value, const string& value_string, const string& file, const st
     AssertEqual(value, true, value_string, "true", file, function, line, hint);
 }
 
-template <typename TestFunc>
+template<typename TestFunc>
 void RunTest(TestFunc function, const std::string& test_name) {
     try {
         function();
@@ -617,7 +616,7 @@ void TestDocumentMatchedByPlusWords() {
     auto server = SearchServer{};
     const auto kId = 42;
     server.AddDocument(kId, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
-    const auto [kWords, kStatus] = server.MatchDocument(kQuery, kId);
+    const auto[kWords, kStatus] = server.MatchDocument(kQuery, kId);
     ASSERT_EQUAL(static_cast<int>(kStatus), static_cast<int>(DocumentStatus::ACTUAL));
     ASSERT_EQUAL(kWords, kExpectedWords);
 }
@@ -627,7 +626,7 @@ void TestDocumentMatchedByMinusWords() {
     auto server = SearchServer{};
     const auto kId = 42;
     server.AddDocument(kId, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
-    const auto [kWords, kStatus] = server.MatchDocument(kQuery, kId);
+    const auto[kWords, kStatus] = server.MatchDocument(kQuery, kId);
     ASSERT_EQUAL(static_cast<int>(kStatus), static_cast<int>(DocumentStatus::ACTUAL));
     ASSERT(kWords.empty());
 }
@@ -647,7 +646,7 @@ void TestDocumentsSortingByRelevance() {
     const auto kResults = server.FindTopDocuments(kQuery);
 
     ASSERT_HINT(is_sorted(kResults.cbegin(), kResults.cend(),
-                     [](const auto& left, const auto& right){return left.relevance > right.relevance;}),
+                          [](const auto& left, const auto& right) { return left.relevance > right.relevance; }),
                 "documents must be sorted by relevance"s);
     ASSERT_EQUAL(kResults.size(), 4U);
 }
@@ -658,7 +657,7 @@ void TestRatingCalculation() {
     const auto kQuery = "huge"s;
     auto server = SearchServer{};
     server.AddDocument(42, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {1, 2, 3});
-    ASSERT_EQUAL(server.FindTopDocuments(kQuery).front().rating, (1 + 2 + 3 ) / 3.0);
+    ASSERT_EQUAL(server.FindTopDocuments(kQuery).front().rating, (1 + 2 + 3) / 3.0);
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).size(), 1U);
 }
 
