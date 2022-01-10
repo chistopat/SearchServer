@@ -125,11 +125,6 @@ vector<string> SplitIntoWords(const string& text) {
 
     return words;
 }
-
-bool IsDoubleEqual(double left, double right) {
-    const double kEpsilon = 1e-6;
-    return std::abs(left - right) < kEpsilon;
-}
 } // namespace helpers
 
 static constexpr auto kEpsilon = 1e-6;
@@ -541,6 +536,9 @@ void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int docum
 }
 
 // -------- Начало модульных тестов поисковой системы ----------
+bool IsDoubleEqual(double left, double right) {
+    return std::abs(left - right) < kEpsilon;
+}
 
 // Добавление документов. Добавленный документ должен находиться по поисковому запросу, который содержит слова из
 // документа.
@@ -713,8 +711,8 @@ void TestRelevanceCalculation() {
 
     const auto kResults = server.FindTopDocuments(kQuery);
 
-    ASSERT(::helpers::IsDoubleEqual(server.FindTopDocuments(kQuery)[0].relevance, 0.36620409));
-    ASSERT(::helpers::IsDoubleEqual(server.FindTopDocuments(kQuery)[1].relevance, 0.15694461));
+    ASSERT(IsDoubleEqual(server.FindTopDocuments(kQuery)[0].relevance, 0.36620409));
+    ASSERT(IsDoubleEqual(server.FindTopDocuments(kQuery)[1].relevance, 0.15694461));
     ASSERT_EQUAL(kResults.size(), 2U);
 }
 
