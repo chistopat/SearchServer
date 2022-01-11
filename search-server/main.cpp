@@ -237,11 +237,11 @@ class SearchServer {
         map<int, double> document_to_relevance;
 
         for (const string& word : query.GetPlusWords()) {
-            if (inverted_index_.count(word) == 0U) {
+            if (word_to_document_frequency_.count(word) == 0U) {
                 continue;
             }
             const double kInverseDocumentFreq = ComputeWordInverseDocumentFreq(word);
-            for (const auto[kDocumentId, kTermFreq] : inverted_index_.at(word)) {
+            for (const auto[kDocumentId, kTermFreq] : word_to_document_frequency_.at(word)) {
                 const auto& kDocumentData = storage_.at(kDocumentId);
                 if (predicate(kDocumentId, kDocumentData.status, kDocumentData.rating)) {
                     document_to_relevance[kDocumentId] += kTermFreq * kInverseDocumentFreq;
@@ -250,8 +250,8 @@ class SearchServer {
         }
 
         for (const string& word : query.GetMinusWords()) {
-            if (inverted_index_.count(word) == 1U) {
-                for (const auto[kDocumentId, _] : inverted_index_.at(word)) {
+            if (word_to_document_frequency_.count(word) == 1U) {
+                for (const auto[kDocumentId, _] : word_to_document_frequency_.at(word)) {
                     document_to_relevance.erase(kDocumentId);
                 }
             }
@@ -265,7 +265,7 @@ class SearchServer {
 
   private:
     set<string> stop_words_;
-    map<string, map<int, double>> inverted_index_;
+    map<string, map<int, double>> word_to_document_frequency_;
     map<int, DocumentData> storage_;
 };
 
@@ -296,7 +296,7 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
     const vector<string> kWords = SplitIntoWordsNoStop(document);
     const double kInvertedWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const string& word : kWords) {
-        inverted_index_[word][document_id] += kInvertedWordCount;
+        word_to_document_frequency_[word][document_id] += kInvertedWordCount;
     }
 
     storage_.insert({document_id, DocumentData{ComputeAverageRating(ratings), status}});
@@ -379,7 +379,7 @@ SearchServer::Query SearchServer::ParseQuery(const string& text) const {
 }
 
 double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
-    return log(static_cast<double>(GetDocumentCount()) / static_cast<double>(inverted_index_.at(word).size()));
+    return log(static_cast<double>(GetDocumentCount()) / static_cast<double>(word_to_document_frequency_.at(word).size()));
 }
 
 vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to_relevance) const {
@@ -395,8 +395,8 @@ vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to
 
 void SearchServer::MatchByPlusWords(const SearchServer::Query& query, int document_id, vector<string>& matched) const {
     for (const string& word : query.GetPlusWords()) {
-        if (inverted_index_.count(word) == 1U) {
-            if (inverted_index_.at(word).count(document_id) == 1U) {
+        if (word_to_document_frequency_.count(word) == 1U) {
+            if (word_to_document_frequency_.at(word).count(document_id) == 1U) {
                 matched.push_back(word);
             }
         }
@@ -405,8 +405,8 @@ void SearchServer::MatchByPlusWords(const SearchServer::Query& query, int docume
 
 void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int document_id, vector<string>& matched) const {
     for (const string& word : query.GetMinusWords()) {
-        if (inverted_index_.count(word) == 1U) {
-            if (inverted_index_.at(word).count(document_id) == 1U) {
+        if (word_to_document_frequency_.count(word) == 1U) {
+            if (word_to_document_frequency_.at(word).count(document_id) == 1U) {
                 matched.clear();
                 break;
             }
