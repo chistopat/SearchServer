@@ -627,9 +627,9 @@ void TestFoundAddedDocumentByStatus() {
 
     SearchServer search_server;
     search_server.AddDocument(0, kDocumentBody, DocumentStatus::ACTUAL, {});
-    search_server.AddDocument(1, kDocumentBody, DocumentStatus::REMOVED, {});
+    search_server.AddDocument(1, kDocumentBody, DocumentStatus::IRRELEVANT, {});
     search_server.AddDocument(2, kDocumentBody, DocumentStatus::BANNED, {});
-    search_server.AddDocument(3, kDocumentBody, DocumentStatus::IRRELEVANT, {});
+    search_server.AddDocument(3, kDocumentBody, DocumentStatus::REMOVED, {});
 
     const int kDocumentStatusCount = 4;
     for (int i = 0; i < kDocumentStatusCount; ++i) {
@@ -641,18 +641,17 @@ void TestFoundAddedDocumentByStatus() {
 //Корректное вычисление релевантности найденных документов.
 
 void TestRelevanceCalculation() {
-    const string kQuery = "oh my cat"s;
+    const string kQuery = "dog"s;
     SearchServer server;
     server.SetStopWords("huge flying green cat");
     server.AddDocument(1, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {1});
-    server.AddDocument(2, string{"my little red god with fire tail"}, DocumentStatus::ACTUAL, {2});
+    server.AddDocument(2, string{"my little red dog with fire tail"}, DocumentStatus::ACTUAL, {2});
     server.AddDocument(3, string{"oh la la"}, DocumentStatus::ACTUAL, {3});
 
     const vector<Document> kResults = server.FindTopDocuments(kQuery);
+    double relevance = 1.0 / 7.0 * log(3.0 / 1.0);
 
-    ASSERT(IsDoubleEqual(server.FindTopDocuments(kQuery)[0].relevance, 0.36620409));
-    ASSERT(IsDoubleEqual(server.FindTopDocuments(kQuery)[1].relevance, 0.15694461));
-    ASSERT_EQUAL(kResults.size(), 2U);
+    ASSERT(IsDoubleEqual(relevance, kResults.front().relevance));
 }
 
 void TestSearchServer() {
