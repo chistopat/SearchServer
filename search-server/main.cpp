@@ -463,49 +463,47 @@ bool IsDoubleEqual(double left, double right) {
 // Добавление документов. Добавленный документ должен находиться по поисковому запросу, который содержит слова из
 // документа.
 void TestSearchOnEmptyBase() {
-    const auto kQuery = "foo"s;
-    auto server = SearchServer{};
+    const string kQuery = "foo"s;
+    SearchServer server;
     ASSERT(server.FindTopDocuments(kQuery).empty());
 }
 
 void TestFoundAddedDocument() {
-    const auto kQuery = "huge"s;
+    const string kQuery = "huge"s;
     const int kId = 42;
-    auto server = SearchServer{};
+    SearchServer server;
     server.AddDocument(kId, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).front().id, kId);
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).size(), 1U);
-
 }
 
 void TestNotFoundAddedDocument() {
-    const auto kQuery = "foo"s;
-    auto server = SearchServer{};
+    const string kQuery = "foo"s;
+    SearchServer server;
     server.AddDocument(42, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
     ASSERT(server.FindTopDocuments(kQuery).empty());
 }
 
 // Поддержка стоп-слов. Стоп-слова исключаются из текста документов.
 
-void TestNotFoundByStopWord() {
-    const auto kStopWords = "huge flying green cat"s;
+void TestExcludeStopWordsFromAddedDocumentContent() {
+    const int kDocId = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = {1, 2, 3};
+    {
+        SearchServer server;
+        server.AddDocument(kDocId, content, DocumentStatus::ACTUAL, ratings);
+        const vector<Document> kFoundDocs = server.FindTopDocuments("in"s);
+        ASSERT_EQUAL(kFoundDocs.size(), 1U);
+        ASSERT_EQUAL(kFoundDocs.front().id, kDocId);
+    }
 
-    auto server = SearchServer{};
-    server.SetStopWords(kStopWords);
-    server.AddDocument(42, string{kStopWords}, DocumentStatus::ACTUAL, {});
-    ASSERT(server.FindTopDocuments(kStopWords).empty());
-}
-
-void TestFoundByRegularWord() {
-    const auto kStopWords = "huge flying green cat"s;
-    const auto kRegularWord = "foo"s;
-    const auto kId = 42;
-    auto server = SearchServer{};
-    server.SetStopWords(kStopWords);
-    server.AddDocument(kId, string{kStopWords + ' ' + kRegularWord}, DocumentStatus::ACTUAL, {});
-    ASSERT_EQUAL(server.FindTopDocuments(kRegularWord).front().id, kId);
-    ASSERT_EQUAL(server.FindTopDocuments(kRegularWord).size(), 1U);
-
+    {
+        SearchServer server;
+        server.SetStopWords("in the"s);
+        server.AddDocument(kDocId, content, DocumentStatus::ACTUAL, ratings);
+        ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
+    }
 }
 
 // Поддержка минус-слов. Документы, содержащие минус-слова поискового запроса, не должны включаться в результаты поиска.
@@ -604,6 +602,7 @@ void TestSearchByUserPredicate() {
 }
 
 //Поиск документов, имеющих заданный статус.
+
 void TestFoundAddedDocumentByStatus() {
     const std::string kDocumentBody = "foo";
 
@@ -621,6 +620,7 @@ void TestFoundAddedDocumentByStatus() {
 }
 
 //Корректное вычисление релевантности найденных документов.
+
 void TestRelevanceCalculation() {
     const auto kQuery = "oh my cat"s;
     auto server = SearchServer{};
@@ -640,8 +640,7 @@ void TestSearchServer() {
     RUN_TEST(TestSearchOnEmptyBase);
     RUN_TEST(TestFoundAddedDocument);
     RUN_TEST(TestNotFoundAddedDocument);
-    RUN_TEST(TestNotFoundByStopWord);
-    RUN_TEST(TestFoundByRegularWord);
+    RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     RUN_TEST(TestQuerySelfExcludedByMinusWords);
     RUN_TEST(TestFilterSearchResultsByMinusWords);
     RUN_TEST(TestDocumentMatchedByPlusWords);
