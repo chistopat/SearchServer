@@ -172,7 +172,10 @@ class SearchServer {
 
         auto matched_documents = FindAllDocuments(kQuery, criteria);
         sort(matched_documents.begin(), matched_documents.end());
-        CutDocuments(matched_documents);
+
+        if (matched_documents.size() > kMaxResultDocumentSize) {
+            matched_documents.resize(kMaxResultDocumentSize);
+        }
 
         return matched_documents;
     }
@@ -216,8 +219,6 @@ class SearchServer {
 
   private:
     bool IsStopWord(const string& word) const;
-
-    static void CutDocuments(Documents& documents);
 
     vector<string> SplitIntoWordsNoStop(const string& text) const;
 
@@ -307,12 +308,6 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
     }
 
     storage_.insert({document_id, DocumentData{ComputeAverageRating(ratings), status}});
-}
-
-void SearchServer::CutDocuments(Documents& documents) {
-    if (documents.size() > kMaxResultDocumentSize) {
-        documents.resize(kMaxResultDocumentSize);
-    }
 }
 
 vector<Document> SearchServer::FindTopDocuments(const string& raw_query, DocumentStatus status) const {
