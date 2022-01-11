@@ -11,7 +11,6 @@
 
 using namespace std;
 
-namespace testing {
 template<typename Key, typename Value>
 std::ostream& operator<<(std::ostream& output_stream, const std::pair<Key, Value>& container) {
     return output_stream << container.first << ": "s << container.second;
@@ -74,21 +73,19 @@ void RunTest(TestFunc function, const std::string& test_name) {
         std::cerr << test_name << " Fail: " << e.what() << std::endl;
     }
 }
-} // testing namespace
 
 #define ASSERT_EQUAL(left, right) \
-::testing::AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, ""s)
+AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, ""s)
 
 #define ASSERT_EQUAL_HINT(left, right, hint) \
-::testing::AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, (hint))
+AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, (hint))
 
-#define ASSERT(expr) ::testing::Assert(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, ""s)
+#define ASSERT(expr) Assert(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, ""s)
 
-#define ASSERT_HINT(expr, hint) ::testing::Assert(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, (hint))
+#define ASSERT_HINT(expr, hint) Assert(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, (hint))
 
-#define RUN_TEST(func)  ::testing::RunTest((func), (#func))
+#define RUN_TEST(func)  RunTest((func), (#func))
 
-namespace helpers {
 
 string ReadLine(std::istream& in = std::cin) {
     string s;
@@ -123,7 +120,7 @@ vector<string> SplitIntoWords(const string& text) {
 
     return words;
 }
-} // namespace helpers
+
 
 static constexpr auto kEpsilon = 1e-6;
 
@@ -377,7 +374,7 @@ DocumentStatus SearchServer::DocumentData::GetStatus() const {
 }
 
 void SearchServer::SetStopWords(const string& text) {
-    for (const string& word : helpers::SplitIntoWords(text)) {
+    for (const string& word : SplitIntoWords(text)) {
         stop_words_.insert(word);
     }
 }
@@ -431,7 +428,7 @@ bool SearchServer::IsStopWord(const string& word) const {
 
 vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {
     vector<string> words;
-    for (const string& word : helpers::SplitIntoWords(text)) {
+    for (const string& word : SplitIntoWords(text)) {
         if (!IsStopWord(word)) {
             words.push_back(word);
         }
@@ -462,7 +459,7 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
 
 SearchServer::Query SearchServer::ParseQuery(const string& text) const {
     Query query;
-    for (const string& word : helpers::SplitIntoWords(text)) {
+    for (const string& word : SplitIntoWords(text)) {
         const QueryWord kQueryWord = ParseQueryWord(word);
         if (!kQueryWord.IsStop()) {
             if (kQueryWord.IsMinus()) {
@@ -521,11 +518,11 @@ void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int docum
 
 [[maybe_unused]] SearchServer CreateSearchServer() {
     SearchServer search_server;
-    search_server.SetStopWords(helpers::ReadLine());
+    search_server.SetStopWords(ReadLine());
 
-    const int kDocumentCount = helpers::ReadLineWithNumber();
+    const int kDocumentCount = ReadLineWithNumber();
     for (int document_id = 0; document_id < kDocumentCount; ++document_id) {
-        const string kDocument = helpers::ReadLine();
+        const string kDocument = ReadLine();
 
         int status_raw;
         cin >> status_raw;
@@ -540,7 +537,7 @@ void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int docum
         }
 
         search_server.AddDocument(document_id, kDocument, static_cast<DocumentStatus>(status_raw), ratings);
-        helpers::ReadLine();
+        ReadLine();
     }
 
     return search_server;
