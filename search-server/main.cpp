@@ -186,35 +186,15 @@ class SearchServer {
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const;
 
   private:
-    class DocumentData {
-      public:
-        DocumentData(int rating, DocumentStatus status);
-
-      public:
-        int GetRating() const;
-
-        DocumentStatus GetStatus() const;
-
-      private:
-        int rating_;
-        DocumentStatus status_;
+    struct DocumentData {
+        int rating;
+        DocumentStatus status;
     };
 
-    class QueryWord {
-      public:
-        QueryWord(const string& data, bool is_minus, bool is_stop);
-
-      public:
-        const string& GetData() const;
-
-        bool IsMinus() const;
-
-        bool IsStop() const;
-
-      private:
-        string data_;
-        bool is_minus_;
-        bool is_stop_;
+    struct QueryWord {
+        string data;
+        bool is_minus;
+        bool is_stop;
     };
 
     QueryWord ParseQueryWord(string text) const;
@@ -270,7 +250,7 @@ class SearchServer {
             const double kInverseDocumentFreq = ComputeWordInverseDocumentFreq(word);
             for (const auto[kDocumentId, kTermFreq] : inverted_index_.at(word)) {
                 const auto& kDocumentData = storage_.at(kDocumentId);
-                if (criteria(kDocumentId, kDocumentData.GetStatus(), kDocumentData.GetRating())) {
+                if (criteria(kDocumentId, kDocumentData.status, kDocumentData.rating)) {
                     relevance_map[kDocumentId] += kTermFreq * kInverseDocumentFreq;
                 }
             }
@@ -310,37 +290,6 @@ const set<string>& SearchServer::Query::GetMinusWords() const {
 
 set<string>& SearchServer::Query::GetMinusWords() {
     return minus_words_;
-}
-
-SearchServer::QueryWord::QueryWord(const string& data, bool is_minus, bool is_stop)
-    : data_(data), is_minus_(is_minus), is_stop_(is_stop) {
-
-}
-
-const string& SearchServer::QueryWord::GetData() const {
-    return data_;
-}
-
-bool SearchServer::QueryWord::IsMinus() const {
-    return is_minus_;
-}
-
-bool SearchServer::QueryWord::IsStop() const {
-    return is_stop_;
-}
-
-SearchServer::DocumentData::DocumentData(int rating, DocumentStatus status)
-    : rating_(rating), status_(status) {
-
-}
-
-int SearchServer::DocumentData::GetRating() const {
-    return rating_;
-
-}
-
-DocumentStatus SearchServer::DocumentData::GetStatus() const {
-    return status_;
 }
 
 void SearchServer::SetStopWords(const string& text) {
@@ -384,7 +333,7 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& 
     MatchByPlusWords(kQuery, document_id, matched_words);
     MatchByMinusWords(kQuery, document_id, matched_words);
 
-    return {matched_words, storage_.at(document_id).GetStatus()};
+    return {matched_words, storage_.at(document_id).status};
 
 }
 
@@ -431,11 +380,11 @@ SearchServer::Query SearchServer::ParseQuery(const string& text) const {
     Query query;
     for (const string& word : SplitIntoWords(text)) {
         const QueryWord kQueryWord = ParseQueryWord(word);
-        if (!kQueryWord.IsStop()) {
-            if (kQueryWord.IsMinus()) {
-                query.GetMinusWords().insert(kQueryWord.GetData());
+        if (!kQueryWord.is_stop) {
+            if (kQueryWord.is_minus) {
+                query.GetMinusWords().insert(kQueryWord.data);
             } else {
-                query.GetPlusWords().insert(kQueryWord.GetData());
+                query.GetPlusWords().insert(kQueryWord.data);
             }
         }
     }
@@ -451,7 +400,7 @@ vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to
     documents.reserve(document_to_relevance.size());
 
     for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
-        documents.push_back({kDocumentId, kRelevance, storage_.at(kDocumentId).GetRating()});
+        documents.push_back({kDocumentId, kRelevance, storage_.at(kDocumentId).rating});
     }
 
     return documents;
