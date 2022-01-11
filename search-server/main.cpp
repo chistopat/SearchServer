@@ -124,56 +124,26 @@ vector<string> SplitIntoWords(const string& text) {
 
 static constexpr auto kEpsilon = 1e-6;
 
-class Document {
-  public:
-    Document() = default;
-
-    Document(int id, double relevance, int rating);
-
-  public:
-    int GetId() const;
-
-    double GetRelevance() const;
-
-    int GetRating() const;
-
-    friend ostream& operator<<(ostream& os, const Document& document);
-
-  public: // not private for compatibility with testing system
+struct Document {
     int id = 0;
     double relevance = 0.;
     int rating = 0;
 };
 
-Document::Document(int id, double relevance, int rating)
-    : id(id), relevance(relevance), rating(rating) {}
-
-int Document::GetId() const {
-    return id;
-}
-
-int Document::GetRating() const {
-    return rating;
-}
-
-double Document::GetRelevance() const {
-    return relevance;
-}
-
 ostream& operator<<(ostream& os, const Document& document) {
     os << "{ "s
-       << "document_id = "s << document.GetId() << ", "s
-       << "relevance = "s << document.GetRelevance() << ", "s
-       << "rating = "s << document.GetRating()
+       << "document_id = "s << document.id << ", "s
+       << "relevance = "s << document.relevance << ", "s
+       << "rating = "s << document.rating
        << " }"s;
     return os;
 }
 
 bool operator<(const Document& left, const Document& right) {
-    if (abs(left.GetRelevance() - right.GetRelevance()) < kEpsilon) {
-        return left.GetRating() > right.GetRating();
+    if (abs(left.relevance - right.relevance) < kEpsilon) {
+        return left.rating > right.rating;
     }
-    return left.GetRelevance() > right.GetRelevance();
+    return left.relevance > right.relevance;
 }
 
 enum class DocumentStatus {
@@ -481,11 +451,7 @@ vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to
     documents.reserve(document_to_relevance.size());
 
     for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
-        documents.emplace_back(
-            kDocumentId,
-            kRelevance,
-            storage_.at(kDocumentId).GetRating()
-        );
+        documents.push_back({kDocumentId, kRelevance, storage_.at(kDocumentId).GetRating()});
     }
 
     return documents;
