@@ -303,10 +303,9 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
 }
 
 vector<Document> SearchServer::FindTopDocuments(const string& raw_query, DocumentStatus status) const {
-    const auto ByStatus = [&status](int, DocumentStatus document_status, int) {
+    return FindTopDocuments(raw_query, [&status](int, DocumentStatus document_status, int) {
       return document_status == status;
-    };
-    return FindTopDocuments(raw_query, ByStatus);
+    });
 }
 
 vector<Document> SearchServer::FindTopDocuments(const string& raw_query) const {
