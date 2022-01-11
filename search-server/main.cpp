@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <cmath>
 #include <experimental/iterator>
@@ -12,7 +11,6 @@
 
 using namespace std;
 
-namespace testing {
 template<typename Key, typename Value>
 std::ostream& operator<<(std::ostream& output_stream, const std::pair<Key, Value>& container) {
     return output_stream << container.first << ": "s << container.second;
@@ -75,21 +73,18 @@ void RunTest(TestFunc function, const std::string& test_name) {
         std::cerr << test_name << " Fail: " << e.what() << std::endl;
     }
 }
-} // testing namespace
 
 #define ASSERT_EQUAL(left, right) \
-::testing::AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, ""s)
+AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, ""s)
 
 #define ASSERT_EQUAL_HINT(left, right, hint) \
-::testing::AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, (hint))
+AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, (hint))
 
-#define ASSERT(expr) ::testing::Assert(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, ""s)
+#define ASSERT(expr) Assert(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, ""s)
 
-#define ASSERT_HINT(expr, hint) ::testing::Assert(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, (hint))
+#define ASSERT_HINT(expr, hint) Assert(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, (hint))
 
-#define RUN_TEST(func)  ::testing::RunTest((func), (#func))
-
-namespace helpers {
+#define RUN_TEST(func)  RunTest((func), (#func))
 
 string ReadLine(std::istream& in = std::cin) {
     string s;
@@ -124,26 +119,16 @@ vector<string> SplitIntoWords(const string& text) {
 
     return words;
 }
-} // namespace helpers
 
 static constexpr auto kEpsilon = 1e-6;
 
-class Document {
-  public:
-    Document() = default;
-
-    Document(int id, double relevance, int rating);
-
+struct Document {
     friend ostream& operator<<(ostream& os, const Document& document);
 
-  public: // not private for compatibility with testing system
     int id = 0;
     double relevance = 0.;
     int rating = 0;
 };
-
-Document::Document(int id, double relevance, int rating)
-    : id(id), relevance(relevance), rating(rating) {}
 
 ostream& operator<<(ostream& os, const Document& document) {
     os << "{ "s
@@ -357,7 +342,7 @@ DocumentStatus SearchServer::DocumentData::GetStatus() const {
 }
 
 void SearchServer::SetStopWords(const string& text) {
-    for (const string& word : helpers::SplitIntoWords(text)) {
+    for (const string& word : SplitIntoWords(text)) {
         stop_words_.insert(word);
     }
 }
@@ -408,7 +393,7 @@ bool SearchServer::IsStopWord(const string& word) const {
 
 vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {
     vector<string> words;
-    for (const string& word : helpers::SplitIntoWords(text)) {
+    for (const string& word : SplitIntoWords(text)) {
         if (!IsStopWord(word)) {
             words.push_back(word);
         }
@@ -439,7 +424,7 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
 
 SearchServer::Query SearchServer::ParseQuery(const string& text) const {
     Query query;
-    for (const string& word : helpers::SplitIntoWords(text)) {
+    for (const string& word : SplitIntoWords(text)) {
         const QueryWord kQueryWord = ParseQueryWord(word);
         if (!kQueryWord.IsStop()) {
             if (kQueryWord.IsMinus()) {
@@ -461,11 +446,7 @@ vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to
     documents.reserve(document_to_relevance.size());
 
     for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
-        documents.emplace_back(
-            kDocumentId,
-            kRelevance,
-            storage_.at(kDocumentId).GetRating()
-        );
+        documents.push_back({ kDocumentId, kRelevance, storage_.at(kDocumentId).GetRating() });
     }
 
     return documents;
@@ -498,11 +479,11 @@ void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int docum
 
 [[maybe_unused]] SearchServer CreateSearchServer() {
     SearchServer search_server;
-    search_server.SetStopWords(helpers::ReadLine());
+    search_server.SetStopWords(ReadLine());
 
-    const int kDocumentCount = helpers::ReadLineWithNumber();
+    const int kDocumentCount = ReadLineWithNumber();
     for (int document_id = 0; document_id < kDocumentCount; ++document_id) {
-        const string kDocument = helpers::ReadLine();
+        const string kDocument = ReadLine();
 
         int status_raw;
         cin >> status_raw;
@@ -517,7 +498,7 @@ void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int docum
         }
 
         search_server.AddDocument(document_id, kDocument, static_cast<DocumentStatus>(status_raw), ratings);
-        helpers::ReadLine();
+        ReadLine();
     }
 
     return search_server;
@@ -690,8 +671,8 @@ void TestFoundAddedDocumentByStatus() {
     search_server.AddDocument(static_cast<int>(DocumentStatus::ACTUAL), kDocumentBody, DocumentStatus::ACTUAL, {});
     search_server.AddDocument(static_cast<int>(DocumentStatus::REMOVED), kDocumentBody, DocumentStatus::REMOVED, {});
     search_server.AddDocument(static_cast<int>(DocumentStatus::BANNED), kDocumentBody, DocumentStatus::BANNED, {});
-    search_server.AddDocument(static_cast<int>(DocumentStatus::IRRELEVANT), kDocumentBody, DocumentStatus::IRRELEVANT,
-                              {});
+    search_server.AddDocument(static_cast<int>(DocumentStatus::IRRELEVANT), kDocumentBody,
+                              DocumentStatus::IRRELEVANT, {});
 
     for (int status = 0; status < 4; ++status) {
         auto document = search_server.FindTopDocuments(kDocumentBody, static_cast<DocumentStatus>(status)).front();
