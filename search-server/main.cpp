@@ -232,18 +232,10 @@ class SearchServer {
 
     double ComputeWordInverseDocumentFreq(const string& word) const;
 
-    template<typename Criteria>
-    vector<Document> FindAllDocuments(const Query& query, Criteria criteria) const {
+    template<typename Predicate>
+    vector<Document> FindAllDocuments(const Query& query, Predicate predicate) const {
         map<int, double> document_to_relevance;
 
-        RetrieveByPlusWords(document_to_relevance, query, criteria);
-        FilterByMinusWords(document_to_relevance, query, criteria);
-
-        return MakeDocuments(document_to_relevance);
-    }
-
-    template<typename Criteria, typename K = int, typename V = double>
-    void RetrieveByPlusWords(map<K, V>& relevance_map, const Query& query, Criteria criteria) const {
         for (const string& word : query.GetPlusWords()) {
             if (inverted_index_.count(word) == 0U) {
                 continue;
@@ -251,23 +243,23 @@ class SearchServer {
             const double kInverseDocumentFreq = ComputeWordInverseDocumentFreq(word);
             for (const auto[kDocumentId, kTermFreq] : inverted_index_.at(word)) {
                 const auto& kDocumentData = storage_.at(kDocumentId);
-                if (criteria(kDocumentId, kDocumentData.status, kDocumentData.rating)) {
-                    relevance_map[kDocumentId] += kTermFreq * kInverseDocumentFreq;
+                if (predicate(kDocumentId, kDocumentData.status, kDocumentData.rating)) {
+                    document_to_relevance[kDocumentId] += kTermFreq * kInverseDocumentFreq;
                 }
             }
         }
-    }
 
-    template<typename Criteria, typename K = int, typename V = double>
-    void FilterByMinusWords(map<K, V>& relevance_map, const Query& query, Criteria) const {
         for (const string& word : query.GetMinusWords()) {
             if (inverted_index_.count(word) == 1U) {
                 for (const auto[kDocumentId, _] : inverted_index_.at(word)) {
-                    relevance_map.erase(kDocumentId);
+                    document_to_relevance.erase(kDocumentId);
                 }
             }
         }
+
+        return MakeDocuments(document_to_relevance);
     }
+
 
     vector<Document> MakeDocuments(const map<int, double>& document_to_relevance) const;
 
