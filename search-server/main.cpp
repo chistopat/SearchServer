@@ -153,6 +153,10 @@ enum class DocumentStatus {
     REMOVED,
 };
 
+ostream& operator<<(ostream& os, DocumentStatus status) {
+    return os << static_cast<int>(status);
+}
+
 class SearchServer {
   public:
     using Documents = vector<Document>;
@@ -230,7 +234,7 @@ class SearchServer {
 
     Query ParseQuery(const string& text) const;
 
-    double ComputeWordInverseDocumentFreq(const string& word) const;
+    double ComputeWordInverseDocumentFrequency(const string& word) const;
 
     template<typename Predicate>
     vector<Document> FindAllDocuments(const Query& query, Predicate predicate) const {
@@ -240,7 +244,7 @@ class SearchServer {
             if (word_to_document_frequency_.count(word) == 0U) {
                 continue;
             }
-            const double kInverseDocumentFreq = ComputeWordInverseDocumentFreq(word);
+            const double kInverseDocumentFreq = ComputeWordInverseDocumentFrequency(word);
             for (const auto[kDocumentId, kTermFreq] : word_to_document_frequency_.at(word)) {
                 const auto& kDocumentData = storage_.at(kDocumentId);
                 if (predicate(kDocumentId, kDocumentData.status, kDocumentData.rating)) {
@@ -377,8 +381,9 @@ SearchServer::Query SearchServer::ParseQuery(const string& text) const {
     return query;
 }
 
-double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
-    return log(static_cast<double>(GetDocumentCount()) / static_cast<double>(word_to_document_frequency_.at(word).size()));
+double SearchServer::ComputeWordInverseDocumentFrequency(const string& word) const {
+    return log(
+        static_cast<double>(GetDocumentCount()) / static_cast<double>(word_to_document_frequency_.at(word).size()));
 }
 
 vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to_relevance) const {
@@ -465,6 +470,7 @@ bool IsDoubleEqual(double left, double right) {
 void TestSearchOnEmptyBase() {
     const string kQuery = "foo"s;
     SearchServer server;
+
     ASSERT(server.FindTopDocuments(kQuery).empty());
 }
 
@@ -472,7 +478,9 @@ void TestFoundAddedDocument() {
     const string kQuery = "huge"s;
     const int kId = 42;
     SearchServer server;
+
     server.AddDocument(kId, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
+
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).front().id, kId);
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).size(), 1U);
 }
@@ -480,7 +488,9 @@ void TestFoundAddedDocument() {
 void TestNotFoundAddedDocument() {
     const string kQuery = "foo"s;
     SearchServer server;
+
     server.AddDocument(42, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
+
     ASSERT(server.FindTopDocuments(kQuery).empty());
 }
 
@@ -494,6 +504,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
         SearchServer server;
         server.AddDocument(kDocId, content, DocumentStatus::ACTUAL, ratings);
         const vector<Document> kFoundDocs = server.FindTopDocuments("in"s);
+
         ASSERT_EQUAL(kFoundDocs.size(), 1U);
         ASSERT_EQUAL(kFoundDocs.front().id, kDocId);
     }
@@ -502,6 +513,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
         SearchServer server;
         server.SetStopWords("in the"s);
         server.AddDocument(kDocId, content, DocumentStatus::ACTUAL, ratings);
+
         ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
     }
 }
@@ -509,18 +521,22 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
 // Поддержка минус-слов. Документы, содержащие минус-слова поискового запроса, не должны включаться в результаты поиска.
 
 void TestQuerySelfExcludedByMinusWords() {
-    const auto kQuery = "huge -huge"s;
-    auto server = SearchServer{};
+    const string kQuery = "huge -huge"s;
+    SearchServer server;
+
     server.AddDocument(0, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
+
     ASSERT(server.FindTopDocuments(kQuery).empty());
 }
 
-void TestFilterSearchResultsByMinusWords() {
-    const auto kQuery = "cat -green"s;
-    auto server = SearchServer{};
-    const auto kId = 13;
+void TestSearchResultsByMinusWords() {
+    const string kQuery = "cat -green"s;
+    SearchServer server;
+    const int kId = 13;
+
     server.AddDocument(0, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
     server.AddDocument(kId, string{"big red cat"}, DocumentStatus::ACTUAL, {});
+
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).front().id, kId);
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).size(), 1U);
 }
@@ -530,22 +546,26 @@ void TestFilterSearchResultsByMinusWords() {
 // пустой список слов.
 
 void TestDocumentMatchedByPlusWords() {
-    const auto kQuery = "cat green"s;
-    const auto kExpectedWords = vector<string>{"cat"s, "green"s};
-    auto server = SearchServer{};
-    const auto kId = 42;
+    const string kQuery = "cat green"s;
+    const vector<string> kExpectedWords{"cat"s, "green"s};
+    SearchServer server;
+    const int kId = 42;
+
     server.AddDocument(kId, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
-    const auto[kWords, kStatus] = server.MatchDocument(kQuery, kId);
-    ASSERT_EQUAL(static_cast<int>(kStatus), static_cast<int>(DocumentStatus::ACTUAL));
+    const auto [kWords, kStatus] = server.MatchDocument(kQuery, kId);
+
+    ASSERT_EQUAL(kStatus, DocumentStatus::ACTUAL);
     ASSERT_EQUAL(kWords, kExpectedWords);
 }
 
 void TestDocumentMatchedByMinusWords() {
-    const auto kQuery = "cat -green"s;
-    auto server = SearchServer{};
-    const auto kId = 42;
+    const string kQuery = "cat -green"s;
+    SearchServer server;
+    const int kId = 42;
+
     server.AddDocument(kId, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
-    const auto[kWords, kStatus] = server.MatchDocument(kQuery, kId);
+    const auto [kWords, kStatus] = server.MatchDocument(kQuery, kId);
+
     ASSERT_EQUAL(static_cast<int>(kStatus), static_cast<int>(DocumentStatus::ACTUAL));
     ASSERT(kWords.empty());
 }
@@ -554,8 +574,8 @@ void TestDocumentMatchedByMinusWords() {
 // должны быть отсортированы в порядке убывания релевантности.
 
 void TestDocumentsSortingByRelevance() {
-    const auto kQuery = "oh my cat"s;
-    auto server = SearchServer{};
+    const string kQuery = "oh my cat"s;
+    SearchServer server;
     server.AddDocument(1, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {});
     server.AddDocument(2, string{"big red cat on the cat"}, DocumentStatus::ACTUAL, {});
     server.AddDocument(3, string{"cats against dogs"}, DocumentStatus::ACTUAL, {});
@@ -573,8 +593,8 @@ void TestDocumentsSortingByRelevance() {
 // Вычисление рейтинга документов. Рейтинг добавленного документа равен среднему арифметическому оценок документа.
 
 void TestRatingCalculation() {
-    const auto kQuery = "huge"s;
-    auto server = SearchServer{};
+    const string kQuery = "huge"s;
+    SearchServer server;
     server.AddDocument(42, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {1, 2, 3});
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).front().rating, (1 + 2 + 3) / 3.0);
     ASSERT_EQUAL(server.FindTopDocuments(kQuery).size(), 1U);
@@ -583,21 +603,20 @@ void TestRatingCalculation() {
 //Фильтрация результатов поиска с использованием предиката, задаваемого пользователем.
 
 void TestSearchByUserPredicate() {
-    const auto kQuery = "oh my cat"s;
-    auto server = SearchServer{};
+    const string kQuery = "oh my cat"s;
+    SearchServer server;
     server.AddDocument(1, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {1});
     server.AddDocument(2, string{"big red cat on the cat"}, DocumentStatus::ACTUAL, {2});
     server.AddDocument(3, string{"cats against dogs"}, DocumentStatus::ACTUAL, {3});
     server.AddDocument(4, string{"my parrot"}, DocumentStatus::BANNED, {4});
     server.AddDocument(5, string{"oh la la"}, DocumentStatus::REMOVED, {5});
 
-    const auto ByUserDefined = [](
-        [[maybe_unused]] int document_id, DocumentStatus document_status, [[maybe_unused]] int rating) {
+    const auto kByUserDefined = [](int document_id, DocumentStatus document_status, int rating) {
       return document_status == DocumentStatus::ACTUAL && rating < 3 && document_id % 2 == 0;
     };
 
-    ASSERT_EQUAL(server.FindTopDocuments(kQuery, ByUserDefined).front().id, 2);
-    ASSERT_EQUAL(server.FindTopDocuments(kQuery, ByUserDefined).size(), 1U);
+    ASSERT_EQUAL(server.FindTopDocuments(kQuery, kByUserDefined).front().id, 2);
+    ASSERT_EQUAL(server.FindTopDocuments(kQuery, kByUserDefined).size(), 1U);
 
 }
 
@@ -607,29 +626,29 @@ void TestFoundAddedDocumentByStatus() {
     const std::string kDocumentBody = "foo";
 
     SearchServer search_server;
-    search_server.AddDocument(static_cast<int>(DocumentStatus::ACTUAL), kDocumentBody, DocumentStatus::ACTUAL, {});
-    search_server.AddDocument(static_cast<int>(DocumentStatus::REMOVED), kDocumentBody, DocumentStatus::REMOVED, {});
-    search_server.AddDocument(static_cast<int>(DocumentStatus::BANNED), kDocumentBody, DocumentStatus::BANNED, {});
-    search_server.AddDocument(static_cast<int>(DocumentStatus::IRRELEVANT), kDocumentBody, DocumentStatus::IRRELEVANT,
-                              {});
+    search_server.AddDocument(0, kDocumentBody, DocumentStatus::ACTUAL, {});
+    search_server.AddDocument(1, kDocumentBody, DocumentStatus::REMOVED, {});
+    search_server.AddDocument(2, kDocumentBody, DocumentStatus::BANNED, {});
+    search_server.AddDocument(3, kDocumentBody, DocumentStatus::IRRELEVANT, {});
 
-    for (int status = 0; status < 4; ++status) {
-        auto document = search_server.FindTopDocuments(kDocumentBody, static_cast<DocumentStatus>(status)).front();
-        ASSERT_EQUAL_HINT(document.id, status, "the converted status must be equal to document id");
+    const int kDocumentStatusCount = 4;
+    for (int i = 0; i < kDocumentStatusCount; ++i) {
+        auto document = search_server.FindTopDocuments(kDocumentBody, static_cast<DocumentStatus>(i)).front();
+        ASSERT_EQUAL_HINT(document.id, i, "the converted status must be equal to document id");
     }
 }
 
 //Корректное вычисление релевантности найденных документов.
 
 void TestRelevanceCalculation() {
-    const auto kQuery = "oh my cat"s;
-    auto server = SearchServer{};
+    const string kQuery = "oh my cat"s;
+    SearchServer server;
     server.SetStopWords("huge flying green cat");
     server.AddDocument(1, string{"huge flying green cat"}, DocumentStatus::ACTUAL, {1});
     server.AddDocument(2, string{"my little red god with fire tail"}, DocumentStatus::ACTUAL, {2});
     server.AddDocument(3, string{"oh la la"}, DocumentStatus::ACTUAL, {3});
 
-    const auto kResults = server.FindTopDocuments(kQuery);
+    const vector<Document> kResults = server.FindTopDocuments(kQuery);
 
     ASSERT(IsDoubleEqual(server.FindTopDocuments(kQuery)[0].relevance, 0.36620409));
     ASSERT(IsDoubleEqual(server.FindTopDocuments(kQuery)[1].relevance, 0.15694461));
@@ -642,7 +661,7 @@ void TestSearchServer() {
     RUN_TEST(TestNotFoundAddedDocument);
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     RUN_TEST(TestQuerySelfExcludedByMinusWords);
-    RUN_TEST(TestFilterSearchResultsByMinusWords);
+    RUN_TEST(TestSearchResultsByMinusWords);
     RUN_TEST(TestDocumentMatchedByPlusWords);
     RUN_TEST(TestDocumentMatchedByMinusWords);
     RUN_TEST(TestDocumentsSortingByRelevance);
