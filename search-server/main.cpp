@@ -121,6 +121,17 @@ vector<string> SplitIntoWords(const string& text) {
     return words;
 }
 
+template <typename StringContainer>
+set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
+    set<string> non_empty_strings;
+    for (const string& str : strings) {
+        if (!str.empty()) {
+            non_empty_strings.insert(str);
+        }
+    }
+    return non_empty_strings;
+}
+
 
 static constexpr auto kEpsilon = 1e-6;
 
@@ -164,6 +175,17 @@ class SearchServer {
   public:
     const size_t kMaxResultDocumentSize = 5U;
     const char kMinusWordPrefix = '-';
+
+  public:
+    SearchServer() = default;
+
+    template <typename StringContainer>
+    explicit SearchServer(const StringContainer& stop_words)
+        : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
+        CheckWords(stop_words_);
+    }
+
+    explicit SearchServer(const string& stop_words_text) : SearchServer(SplitIntoWords(stop_words_text)) {}
 
   public:
     void SetStopWords(const string& text);
@@ -260,8 +282,18 @@ class SearchServer {
         return MakeDocuments(document_to_relevance);
     }
 
-
     vector<Document> MakeDocuments(const map<int, double>& document_to_relevance) const;
+
+    static bool IsValidWord(const string& word);
+
+    template<typename Container>
+    static void CheckWords(Container words) {
+        for (const auto& word : words) {
+            if (!IsValidWord(word)) {
+                throw std::invalid_argument("invalid word: " + word);
+            }
+        }
+    }
 
   private:
     set<string> stop_words_;
@@ -405,6 +437,10 @@ vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to
     }
 
     return documents;
+}
+
+bool SearchServer::IsValidWord(const string& word) {
+    return none_of(word.begin(), word.end(), [](char ch) {return iscntrl(ch);});
 }
 
 [[maybe_unused]] void PrintDocument(const Document& document) {
@@ -627,7 +663,7 @@ void TestFoundAddedDocumentByStatus() {
     }
 }
 
-//Корректное вычисление релевантности найденных документов.
+// Корректное вычисление релевантности найденных документов.
 
 void TestRelevanceCalculation() {
     const string kQuery = "dog"s;
@@ -641,6 +677,27 @@ void TestRelevanceCalculation() {
     double relevance = 1.0 / 7.0 * log(3.0 / 1.0);
 
     ASSERT(IsDoubleEqual(relevance, kResults.front().relevance));
+}
+
+// Конструктор должен выбрасывать исключение если стоп-слова содержат спец-символы
+
+void TestConstuctorParametersValidation() {
+    //Positive case
+    { [[maybe_unused]] SearchServer server; }
+    { [[maybe_unused]] SearchServer server("alpha bravo charley delta"s); }
+    { [[maybe_unused]] SearchServer server(vector<string>{"alfa"s, "bravo"s, "charley"s, "delta"s}); }
+    { [[maybe_unused]] SearchServer server(set<string>{"alfa"s, "bravo"s, "charley"s, "delta"s}); }
+
+    //Negative case
+    {
+        try {
+            [[maybe_unused]] SearchServer server("al\x12pha bravo cha\x24rley delta)"s);
+        } catch (const invalid_argument& e) {
+            ASSERT_HINT(true, e.what());
+        } catch (std::exception& e) {
+            ASSERT_HINT(false, "unexpected exception: "s + typeid(e).name());
+        }
+    }
 }
 
 void TestSearchServer() {
@@ -657,6 +714,7 @@ void TestSearchServer() {
     RUN_TEST(TestFoundAddedDocumentByStatus);
     RUN_TEST(TestSearchByUserPredicate);
     RUN_TEST(TestRelevanceCalculation);
+    RUN_TEST(TestConstuctorParametersValidation);
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
