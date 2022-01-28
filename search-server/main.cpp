@@ -87,11 +87,11 @@ AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, (h
 
 #define RUN_TEST(func)  RunTest((func), (#func))
 
-template<typename Function, typename Throw>
-void CheckThrow(Function func, Throw) {
+template<typename Exception, typename Function>
+void CheckThrow(Function func) {
     try {
         func();
-    } catch (const Throw& e) {
+    } catch (const Exception& e) {
         ASSERT_HINT(true, e.what());
         return;
     } catch (...) {
@@ -148,7 +148,7 @@ set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
 static constexpr auto kEpsilon = 1e-6;
 
 struct Document {
-    Document(int id = 0, double relevance = 0.0, int rating = 0)
+    explicit Document(int id = 0, double relevance = 0.0, int rating = 0)
         : id(id), relevance(relevance), rating(rating) {}
 
     int id;
@@ -424,11 +424,11 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
     QueryWord result;
 
     bool is_minus = false;
-    if (text.front() == '-') {
+    if (text.front() == kMinusWordPrefix) {
         is_minus = true;
         text = text.substr(1);
     }
-    if (text.empty() || text.front() == '-' || !IsValidWord(text)) {
+    if (text.empty() || text.front() == kMinusWordPrefix || !IsValidWord(text)) {
         throw invalid_argument("invalid word " + text);
     }
 
@@ -461,7 +461,7 @@ vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to
     documents.reserve(document_to_relevance.size());
 
     for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
-        documents.push_back({kDocumentId, kRelevance, storage_.at(kDocumentId).rating});
+        documents.push_back(Document{kDocumentId, kRelevance, storage_.at(kDocumentId).rating});
     }
 
     return documents;
@@ -729,13 +729,12 @@ void TestRelevanceCalculation() {
 // Конструктор должен выбрасывать исключение если стоп-слова содержат спец-символы
 
 void TestConstuctorParametersValidation() {
-    //Positive case
     { [[maybe_unused]] SearchServer server; }
     { [[maybe_unused]] SearchServer server("alpha bravo charley delta"s); }
     { [[maybe_unused]] SearchServer server(vector<string>{"alfa"s, "bravo"s, "charley"s, "delta"s}); }
     { [[maybe_unused]] SearchServer server(set<string>{"alfa"s, "bravo"s, "charley"s, "delta"s}); }
 
-    CheckThrow([]() { SearchServer{"al\x12pha bravo cha\x24rley delta"s}; }, std::invalid_argument{""});
+    CheckThrow<invalid_argument>([]() { SearchServer{"al\x12pha bravo cha\x24rley delta"s}; });
 }
 
 // Валидация данных при добавлении документа
@@ -743,22 +742,17 @@ void TestConstuctorParametersValidation() {
 void TestAddDocumentValidation() {
     SearchServer server;
 
-    CheckThrow(
-        [&server]() { server.AddDocument(-1, {}, DocumentStatus::ACTUAL, {}); },
-        std::invalid_argument{""s}
-    );
+    CheckThrow<invalid_argument>([&server]() { server.AddDocument(-1, {}, DocumentStatus::ACTUAL, {}); });
 
-    CheckThrow(
+    CheckThrow<invalid_argument>(
         [&server]() {
           server.AddDocument(1, {}, DocumentStatus::ACTUAL, {});
           server.AddDocument(1, {}, DocumentStatus::ACTUAL, {});
-        },
-        std::invalid_argument{""}
+        }
     );
 
-    CheckThrow(
-        [&server]() { server.AddDocument(1, "al\x12pha bravo cha\x24rley delta"s, DocumentStatus::ACTUAL, {}); },
-        std::invalid_argument{""}
+    CheckThrow<invalid_argument>(
+        [&server]() { server.AddDocument(1, "al\x12pha bravo cha\x24rley delta"s, DocumentStatus::ACTUAL, {}); }
     );
 
     server.AddDocument(2, "alpha bravo charley delta"s, DocumentStatus::ACTUAL, {});
@@ -768,20 +762,10 @@ void TestSearchQueryValidation() {
     SearchServer server;
     server.AddDocument(2, "alpha bravo charley delta"s, DocumentStatus::ACTUAL, {});
 
-    CheckThrow(
-        [&server]() { server.FindTopDocuments("al\x12pha"s); },
-        std::invalid_argument{""}
-    );
+    CheckThrow<invalid_argument>([&server]() { server.FindTopDocuments("al\x12pha"s); });
+    CheckThrow<invalid_argument>([&server]() { server.FindTopDocuments("--alpha"s); });
+    CheckThrow<invalid_argument>([&server]() { server.FindTopDocuments("-"s); });
 
-    CheckThrow(
-        [&server]() { server.FindTopDocuments("--alpha"s); },
-        std::invalid_argument{""}
-    );
-
-    CheckThrow(
-        [&server]() { server.FindTopDocuments("-"s); },
-        std::invalid_argument{""s}
-    );
     ASSERT_EQUAL(server.FindTopDocuments("alpha"s).size(), 1U);
 }
 
@@ -794,15 +778,8 @@ void TestGetDocumentId() {
     ASSERT_EQUAL(server.GetDocumentId(2), 3);
     ASSERT_EQUAL(server.GetDocumentId(0), 1);
 
-    CheckThrow(
-        [&server]() { server.GetDocumentId(-1); },
-        std::out_of_range{""s}
-    );
-
-    CheckThrow(
-        [&server]() { server.GetDocumentId(42); },
-        std::out_of_range{""s}
-    );
+    CheckThrow<out_of_range>([&server]() { server.GetDocumentId(-1); });
+    CheckThrow<out_of_range>([&server]() { server.GetDocumentId(42); });
 }
 
 void TestSearchServer() {
