@@ -162,19 +162,19 @@ class SearchServer {
     using Documents = vector<Document>;
 
   public:
-    static constexpr auto kMaxResultDocumentSize = 5U;
-    static constexpr auto kMinusWordPrefix = '-';
+    const size_t kMaxResultDocumentSize = 5U;
+    const char kMinusWordPrefix = '-';
 
   public:
     void SetStopWords(const string& text);
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
-    template<typename Criteria>
-    Documents FindTopDocuments(const string& raw_query, Criteria criteria) const {
+    template<typename Predicate>
+    Documents FindTopDocuments(const string& raw_query, Predicate predicate) const {
         const Query kQuery = ParseQuery(raw_query);
 
-        auto matched_documents = FindAllDocuments(kQuery, criteria);
+        auto matched_documents = FindAllDocuments(kQuery, predicate);
         sort(matched_documents.begin(), matched_documents.end());
 
         if (matched_documents.size() > kMaxResultDocumentSize) {
@@ -227,10 +227,6 @@ class SearchServer {
     vector<string> SplitIntoWordsNoStop(const string& text) const;
 
     static int ComputeAverageRating(const vector<int>& ratings);
-
-    void MatchByPlusWords(const Query& query, int document_id, vector<string>& matched) const;
-
-    void MatchByMinusWords(const Query& query, int document_id, vector<string>& matched) const;
 
     Query ParseQuery(const string& text) const;
 
@@ -320,8 +316,22 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& 
     const Query kQuery = ParseQuery(raw_query);
     vector<string> matched_words;
 
-    MatchByPlusWords(kQuery, document_id, matched_words);
-    MatchByMinusWords(kQuery, document_id, matched_words);
+    for (const string& word : kQuery.GetPlusWords()) {
+        if (word_to_document_frequency_.count(word) == 1U) {
+            if (word_to_document_frequency_.at(word).count(document_id) == 1U) {
+                matched_words.push_back(word);
+            }
+        }
+    }
+
+    for (const string& word : kQuery.GetMinusWords()) {
+        if (word_to_document_frequency_.count(word) == 1U) {
+            if (word_to_document_frequency_.at(word).count(document_id) == 1U) {
+                matched_words.clear();
+                break;
+            }
+        }
+    }
 
     return {matched_words, storage_.at(document_id).status};
 
@@ -395,27 +405,6 @@ vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to
     }
 
     return documents;
-}
-
-void SearchServer::MatchByPlusWords(const SearchServer::Query& query, int document_id, vector<string>& matched) const {
-    for (const string& word : query.GetPlusWords()) {
-        if (word_to_document_frequency_.count(word) == 1U) {
-            if (word_to_document_frequency_.at(word).count(document_id) == 1U) {
-                matched.push_back(word);
-            }
-        }
-    }
-}
-
-void SearchServer::MatchByMinusWords(const SearchServer::Query& query, int document_id, vector<string>& matched) const {
-    for (const string& word : query.GetMinusWords()) {
-        if (word_to_document_frequency_.count(word) == 1U) {
-            if (word_to_document_frequency_.at(word).count(document_id) == 1U) {
-                matched.clear();
-                break;
-            }
-        }
-    }
 }
 
 [[maybe_unused]] void PrintDocument(const Document& document) {
