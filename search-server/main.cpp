@@ -87,6 +87,19 @@ AssertEqual((left), (right), #left, #right, __FILE__, __FUNCTION__, __LINE__, (h
 
 #define RUN_TEST(func)  RunTest((func), (#func))
 
+template<typename Function, typename Throw>
+void CheckThrow(Function func, Throw) {
+    try {
+        func();
+    } catch (const Throw& e) {
+        ASSERT_HINT(true, e.what());
+        return;
+    } catch (...) {
+        ASSERT_HINT(false, "unexpected exception");
+    }
+    ASSERT_HINT(false, "exception was not thrown");
+}
+
 string ReadLine(std::istream& in = std::cin) {
     string s;
     getline(in, s);
@@ -135,9 +148,12 @@ set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
 static constexpr auto kEpsilon = 1e-6;
 
 struct Document {
-    int id = 0;
-    double relevance = 0.;
-    int rating = 0;
+    Document(int id = 0, double relevance = 0.0, int rating = 0)
+        : id(id), relevance(relevance), rating(rating) {}
+
+    int id;
+    double relevance;
+    int rating;
 };
 
 ostream& operator<<(ostream& os, const Document& document) {
@@ -213,6 +229,8 @@ class SearchServer {
     size_t GetDocumentCount() const;
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const;
+
+    int GetDocumentId(int index) const;
 
   private:
     struct DocumentData {
@@ -328,8 +346,8 @@ void SearchServer::SetStopWords(const string& text) {
 void SearchServer::AddDocument(int document_id, const string& document, DocumentStatus status,
                                const vector<int>& ratings) {
     CheckDocumentId(document_id);
-
     const vector<string> kWords = SplitIntoWordsNoStop(document);
+    CheckWords(kWords);
     const double kInvertedWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const string& word : kWords) {
         word_to_document_frequency_[word][document_id] += kInvertedWordCount;
@@ -403,13 +421,19 @@ int SearchServer::ComputeAverageRating(const vector<int>& ratings) {
 }
 
 SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
+    QueryWord result;
+
     bool is_minus = false;
-    // Word shouldn't be empty
-    if (text[0U] == kMinusWordPrefix) {
+    if (text.front() == '-') {
         is_minus = true;
-        text = text.substr(1U);
+        text = text.substr(1);
     }
-    return QueryWord{text, is_minus, IsStopWord(text)};
+    if (text.empty() || text.front() == '-' || !IsValidWord(text)) {
+        throw invalid_argument("invalid word " + text);
+    }
+
+    result = QueryWord{text, is_minus, IsStopWord(text)};
+    return result;
 }
 
 SearchServer::Query SearchServer::ParseQuery(const string& text) const {
@@ -454,6 +478,16 @@ void SearchServer::CheckDocumentId(int document_id) const {
     if (storage_.count(document_id)) {
         throw std::invalid_argument("document_id already exists");
     }
+}
+
+int SearchServer::GetDocumentId(int index) const {
+    if (index >= 0 && index < static_cast<int>(GetDocumentCount())) {
+        auto it = storage_.begin();
+        while (index--)
+            ++it;
+        return it->first;
+    }
+    throw out_of_range("");
 }
 
 [[maybe_unused]] void PrintDocument(const Document& document) {
@@ -692,19 +726,6 @@ void TestRelevanceCalculation() {
     ASSERT(IsDoubleEqual(relevance, kResults.front().relevance));
 }
 
-template<typename Function, typename Throw>
-void CheckThrow(Function func, Throw) {
-    try {
-        func();
-    } catch (const Throw& e) {
-        ASSERT_HINT(true, e.what());
-        return;
-    } catch (...) {
-        ASSERT_HINT(false, "unexpected exception");
-    }
-    ASSERT_HINT(false, "exception was not thrown");
-}
-
 // Конструктор должен выбрасывать исключение если стоп-слова содержат спец-символы
 
 void TestConstuctorParametersValidation() {
@@ -724,7 +745,7 @@ void TestAddDocumentValidation() {
 
     CheckThrow(
         [&server]() { server.AddDocument(-1, {}, DocumentStatus::ACTUAL, {}); },
-        std::invalid_argument{""}
+        std::invalid_argument{""s}
     );
 
     CheckThrow(
@@ -736,8 +757,51 @@ void TestAddDocumentValidation() {
     );
 
     CheckThrow(
-        [&server]() {server.AddDocument(1, "al\x12pha bravo cha\x24rley delta"s, DocumentStatus::ACTUAL, {});},
+        [&server]() { server.AddDocument(1, "al\x12pha bravo cha\x24rley delta"s, DocumentStatus::ACTUAL, {}); },
         std::invalid_argument{""}
+    );
+
+    server.AddDocument(2, "alpha bravo charley delta"s, DocumentStatus::ACTUAL, {});
+}
+
+void TestSearchQueryValidation() {
+    SearchServer server;
+    server.AddDocument(2, "alpha bravo charley delta"s, DocumentStatus::ACTUAL, {});
+
+    CheckThrow(
+        [&server]() { server.FindTopDocuments("al\x12pha"s); },
+        std::invalid_argument{""}
+    );
+
+    CheckThrow(
+        [&server]() { server.FindTopDocuments("--alpha"s); },
+        std::invalid_argument{""}
+    );
+
+    CheckThrow(
+        [&server]() { server.FindTopDocuments("-"s); },
+        std::invalid_argument{""s}
+    );
+    ASSERT_EQUAL(server.FindTopDocuments("alpha"s).size(), 1U);
+}
+
+void TestGetDocumentId() {
+    SearchServer server;
+    server.AddDocument(1, "alpha"s, DocumentStatus::ACTUAL, {});
+    server.AddDocument(2, "bravo"s, DocumentStatus::ACTUAL, {});
+    server.AddDocument(3, "charley"s, DocumentStatus::ACTUAL, {});
+
+    ASSERT_EQUAL(server.GetDocumentId(2), 3);
+    ASSERT_EQUAL(server.GetDocumentId(0), 1);
+
+    CheckThrow(
+        [&server]() { server.GetDocumentId(-1); },
+        std::out_of_range{""s}
+    );
+
+    CheckThrow(
+        [&server]() { server.GetDocumentId(42); },
+        std::out_of_range{""s}
     );
 }
 
@@ -757,6 +821,8 @@ void TestSearchServer() {
     RUN_TEST(TestRelevanceCalculation);
     RUN_TEST(TestConstuctorParametersValidation);
     RUN_TEST(TestAddDocumentValidation);
+    RUN_TEST(TestSearchQueryValidation);
+    RUN_TEST(TestGetDocumentId);
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
