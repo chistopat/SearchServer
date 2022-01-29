@@ -308,7 +308,7 @@ class SearchServer {
     set<string> stop_words_;
     map<string, map<int, double>> word_to_document_frequency_;
     map<int, DocumentData> storage_;
-    vector<int> doсuments_;
+    vector<int> documents_;
 };
 
 const set<string>& SearchServer::Query::GetPlusWords() const {
@@ -336,7 +336,7 @@ void SearchServer::SetStopWords(const string& text) {
 void SearchServer::AddDocument(int document_id, const string& document, DocumentStatus status,
                                const vector<int>& ratings) {
     CheckDocumentId(document_id);
-    doсuments_.push_back(document_id);
+    documents_.push_back(document_id);
     const vector<string> kWords = SplitIntoWordsNoStop(document);
     const double kInvertedWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const string& word : kWords) {
@@ -474,7 +474,7 @@ void SearchServer::CheckDocumentId(int document_id) const {
 }
 
 int SearchServer::GetDocumentId(int index) const {
-    return doсuments_.at(index);
+    return documents_.at(index);
 }
 
 [[maybe_unused]] void PrintDocument(const Document& document) {
