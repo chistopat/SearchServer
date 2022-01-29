@@ -134,17 +134,6 @@ vector<string> SplitIntoWords(const string& text) {
     return words;
 }
 
-template<typename StringContainer>
-set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
-    set<string> non_empty_strings;
-    for (const string& str : strings) {
-        if (!str.empty()) {
-            non_empty_strings.insert(str);
-        }
-    }
-    return non_empty_strings;
-}
-
 static constexpr auto kEpsilon = 1e-6;
 
 struct Document {
@@ -196,7 +185,7 @@ class SearchServer {
 
     template<typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words)
-        : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
+        : stop_words_(stop_words.begin(), stop_words.end()) {
         CheckWords(stop_words_);
     }
 
@@ -319,6 +308,7 @@ class SearchServer {
     set<string> stop_words_;
     map<string, map<int, double>> word_to_document_frequency_;
     map<int, DocumentData> storage_;
+    vector<int> doсuments_;
 };
 
 const set<string>& SearchServer::Query::GetPlusWords() const {
@@ -346,8 +336,8 @@ void SearchServer::SetStopWords(const string& text) {
 void SearchServer::AddDocument(int document_id, const string& document, DocumentStatus status,
                                const vector<int>& ratings) {
     CheckDocumentId(document_id);
+    doсuments_.push_back(document_id);
     const vector<string> kWords = SplitIntoWordsNoStop(document);
-    CheckWords(kWords);
     const double kInvertedWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const string& word : kWords) {
         word_to_document_frequency_[word][document_id] += kInvertedWordCount;
@@ -405,6 +395,9 @@ vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {
         if (!IsStopWord(word)) {
             words.push_back(word);
         }
+        if (!IsValidWord(word)) {
+            throw std::invalid_argument("invalid word: " + word);
+        }
     }
     return words;
 }
@@ -461,7 +454,7 @@ vector<Document> SearchServer::MakeDocuments(const map<int, double>& document_to
     documents.reserve(document_to_relevance.size());
 
     for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
-        documents.push_back(Document{kDocumentId, kRelevance, storage_.at(kDocumentId).rating});
+        documents.emplace_back(Document{kDocumentId, kRelevance, storage_.at(kDocumentId).rating});
     }
 
     return documents;
@@ -481,13 +474,7 @@ void SearchServer::CheckDocumentId(int document_id) const {
 }
 
 int SearchServer::GetDocumentId(int index) const {
-    if (index >= 0 && index < static_cast<int>(GetDocumentCount())) {
-        auto it = storage_.begin();
-        while (index--)
-            ++it;
-        return it->first;
-    }
-    throw out_of_range("");
+    return doсuments_.at(index);
 }
 
 [[maybe_unused]] void PrintDocument(const Document& document) {
