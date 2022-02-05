@@ -4,6 +4,7 @@
 
 #include "read_input_functions.h"
 
+
 std::string ReadLine(std::istream& in) {
     std::string s;
     getline(in, s);

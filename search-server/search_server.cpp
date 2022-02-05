@@ -50,7 +50,8 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 
-std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
+std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query,
+                                                                                 int document_id) const {
     const Query kQuery = ParseQuery(raw_query);
     std::vector<std::string> matched_words;
 

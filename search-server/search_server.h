@@ -10,6 +10,7 @@
 #include <map>
 #include <cmath>
 
+
 class SearchServer {
   public:
     using Documents = std::vector<Document>;
@@ -41,7 +42,7 @@ class SearchServer {
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
 
-    std::vector <Document> FindTopDocuments(const std::string& raw_query) const;
+    std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
 
     size_t GetDocumentCount() const;
 
@@ -68,21 +69,21 @@ class SearchServer {
       public:
         const std::set<std::string>& GetPlusWords() const;
 
-        std::set <std::string>& GetPlusWords();
+        std::set<std::string>& GetPlusWords();
 
-        const std::set <std::string>& GetMinusWords() const;
+        const std::set<std::string>& GetMinusWords() const;
 
-        std::set <std::string>& GetMinusWords();
+        std::set<std::string>& GetMinusWords();
 
       private:
-        std::set <std::string> plus_words_;
-        std::set <std::string> minus_words_;
+        std::set<std::string> plus_words_;
+        std::set<std::string> minus_words_;
     };
 
   private:
     bool IsStopWord(const std::string& word) const;
 
-    std::vector <std::string> SplitIntoWordsNoStop(const std::string& text) const;
+    std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
 
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
@@ -91,9 +92,9 @@ class SearchServer {
     double ComputeWordInverseDocumentFrequency(const std::string& word) const;
 
     template<typename Predicate>
-    std::vector <Document> FindAllDocuments(const Query& query, Predicate predicate) const;
+    std::vector<Document> FindAllDocuments(const Query& query, Predicate predicate) const;
 
-    std::vector <Document> MakeDocuments(const std::map<int, double>& document_to_relevance) const;
+    std::vector<Document> MakeDocuments(const std::map<int, double>& document_to_relevance) const;
 
     static bool IsValidWord(const std::string& word);
 
@@ -109,12 +110,11 @@ class SearchServer {
     void CheckDocumentId(int document_id) const;
 
   private:
-    std::set <std::string> stop_words_;
-    std::map <std::string, std::map<int, double>> word_to_document_frequency_;
+    std::set<std::string> stop_words_;
+    std::map<std::string, std::map<int, double>> word_to_document_frequency_;
     std::map<int, DocumentData> storage_;
     std::vector<int> documents_;
 };
-
 
 template<typename Predicate>
 SearchServer::Documents SearchServer::FindTopDocuments(const std::string& raw_query, Predicate predicate) const {
