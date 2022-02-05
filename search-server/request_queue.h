@@ -17,7 +17,7 @@ class RequestQueue {
     std::vector<Document> AddFindRequest(const std::string& raw_query);
 
     int GetNoResultRequests() const;
-    
+
   public:
     void CollectMetrics(const std::vector<Document>& result);
 
@@ -29,7 +29,7 @@ class RequestQueue {
 };
 
 template<typename DocumentPredicate>
-std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate)  {
+std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate) {
     auto result = search_server_.FindTopDocuments(raw_query, document_predicate);
     CollectMetrics(result);
     return result;

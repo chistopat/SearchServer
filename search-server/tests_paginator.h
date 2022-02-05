@@ -6,6 +6,7 @@
 #include <numeric>
 #include <sstream>
 
+
 using namespace std;
 
 void TestPageCounts() {
@@ -47,7 +48,6 @@ void TestPageSizes() {
     const vector<size_t> expected = {11, 11, 4};
     ASSERT_EQUAL(page_sizes, expected);
 }
-
 
 void TestConstContainer() {
     const string letters = "abcdefghijklmnopqrstuvwxyz";

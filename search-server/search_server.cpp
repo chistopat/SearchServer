@@ -1,7 +1,3 @@
-//
-// Created by Yegor Chistyakov on 05.02.2022.
-//
-
 #include "search_server.h"
 
 
@@ -156,7 +152,7 @@ std::vector<Document> SearchServer::MakeDocuments(const std::map<int, double>& d
 }
 
 bool SearchServer::IsValidWord(const std::string& word) {
-    return none_of(word.begin(), word.end(), [](char ch) { return iscntrl(ch); });
+    return std::none_of(word.begin(), word.end(), [](char ch) { return std::iscntrl(ch); });
 }
 
 void SearchServer::CheckDocumentId(int document_id) const {

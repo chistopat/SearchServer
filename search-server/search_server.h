@@ -9,6 +9,7 @@
 #include <utility>
 #include <map>
 #include <cmath>
+#include <algorithm>
 
 
 class SearchServer {

@@ -1,10 +1,6 @@
-//
-// Created by Yegor Chistyakov on 05.02.2022.
-//
-
 #include "request_queue.h"
 
-std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentStatus status)  {
+std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentStatus status) {
     auto result =  search_server_.FindTopDocuments(raw_query, status);
     CollectMetrics(result);
     return result;

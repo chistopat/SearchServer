@@ -1,6 +1,7 @@
 #include "tests_search_server.h"
 #include "tests_paginator.h"
 #include "tests_request_queue.h"
+#include "paginator.h"
 
 int main() {
     TestPaginator();
