@@ -270,4 +270,5 @@ void TestSearchServer() {
     RUN_TEST(TestAddDocumentValidation);
     RUN_TEST(TestSearchQueryValidation);
     RUN_TEST(TestGetDocumentId);
+    std::cerr << std::endl;
 }

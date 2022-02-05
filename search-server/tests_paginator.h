@@ -93,4 +93,5 @@ void TestPaginator() {
     RUN_TEST(TestPageSizes);
     RUN_TEST(TestConstContainer);
     RUN_TEST(TestPagePagination);
+    std::cerr << std::endl;
 }

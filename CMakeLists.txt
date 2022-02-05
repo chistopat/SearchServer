@@ -15,4 +15,4 @@ add_executable(
         search-server/request_queue.cpp
 
         search-server/paginator.h
-        search-server/tests_search_server.h search-server/tests_paginator.h)
+        search-server/tests_search_server.h search-server/tests_paginator.h search-server/tests_request_queue.h)

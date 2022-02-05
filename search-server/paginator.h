@@ -34,7 +34,7 @@ class IteratorRange {
 template<typename Iterator>
 class Paginator {
   public:
-    Paginator(Iterator first, Iterator last, size_t page_size)
+    Paginator(Iterator first, Iterator last, int page_size)
         : first_(first)
         , last_(last)
         , page_size_(page_size)
@@ -42,8 +42,8 @@ class Paginator {
 
         auto it = first;
         for (auto& page : pages_) {
-            page = IteratorRange{it, next(it, std::min(page_size, static_cast<size_t>(last - it)))};
-            it += page_size;
+            page = {it, next(it, std::min(page_size, static_cast<int>(distance(it, last))))};
+            std::advance(it, page_size);
         }
     };
 
@@ -69,7 +69,7 @@ class Paginator {
   private:
     Iterator first_;
     Iterator last_;
-    size_t page_size_;
+    int page_size_;
     std::vector<IteratorRange<Iterator>> pages_;
 };
 
