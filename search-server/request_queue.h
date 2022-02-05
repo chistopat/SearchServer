@@ -1,0 +1,12 @@
+//
+// Created by Yegor Chistyakov on 05.02.2022.
+//
+
+#ifndef SEARCHSERVER_SEARCH_SERVER_REQUEST_QUEUE_H_
+#define SEARCHSERVER_SEARCH_SERVER_REQUEST_QUEUE_H_
+
+class request_queue {
+
+};
+
+#endif //SEARCHSERVER_SEARCH_SERVER_REQUEST_QUEUE_H_
