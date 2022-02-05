@@ -26,6 +26,4 @@ enum class DocumentStatus {
 
 std::ostream& operator<<(std::ostream& os, DocumentStatus status);
 
-void PrintDocument(const Document& document);
-
 bool IsDoubleEqual(double left, double right);

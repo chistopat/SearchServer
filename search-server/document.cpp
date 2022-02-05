@@ -1,7 +1,3 @@
-//
-// Created by Yegor Chistyakov on 05.02.2022.
-//
-
 #include "document.h"
 
 
@@ -32,8 +28,4 @@ bool operator<(const Document& left, const Document& right) {
 
 std::ostream& operator<<(std::ostream& os, DocumentStatus status) {
     return os << static_cast<int>(status);
-}
-
-[[maybe_unused]] void PrintDocument(const Document& document) {
-    std::cout << document << std::endl;
 }

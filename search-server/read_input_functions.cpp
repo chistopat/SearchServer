@@ -1,7 +1,3 @@
-//
-// Created by Yegor Chistyakov on 05.02.2022.
-//
-
 #include "read_input_functions.h"
 
 

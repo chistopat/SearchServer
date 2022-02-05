@@ -1,7 +1,3 @@
-//
-// Created by Yegor Chistyakov on 05.02.2022.
-//
-
 #include "string_processing.h"
 
 
