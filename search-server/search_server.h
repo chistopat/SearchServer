@@ -34,13 +34,13 @@ class SearchServer {
     explicit SearchServer(const std::string& stop_words_text)
         : SearchServer(SplitIntoWords(stop_words_text)) {}
 
-    std::unordered_set<int>::iterator begin();
+    std::set<int>::iterator begin();
 
-    std::unordered_set<int>::iterator end();
+    std::set<int>::iterator end();
 
-    std::unordered_set<int>::const_iterator begin() const;
+    std::set<int>::const_iterator begin() const;
 
-    std::unordered_set<int>::const_iterator end() const;
+    std::set<int>::const_iterator end() const;
 
   public:
     void SetStopWords(const std::string& text);
@@ -127,7 +127,7 @@ class SearchServer {
     std::unordered_map<std::string, std::unordered_map<int, double>> word_to_document_frequency_;
     std::unordered_map<int, std::map<std::string , double>> document_to_word_frequency_;
     std::unordered_map<int, DocumentData> storage_;
-    std::unordered_set<int> documents_;
+    std::set<int> documents_;
 };
 
 template<typename Predicate>

@@ -32,7 +32,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
         word_to_document_frequency_[word][document_id] += kInvertedWordCount;
         document_to_word_frequency_[document_id][word] += kInvertedWordCount;
     }
-
+    documents_.insert(document_id);
     storage_.insert({document_id, DocumentData{ComputeAverageRating(ratings), status}});
 }
 
@@ -164,19 +164,19 @@ void SearchServer::CheckDocumentId(int document_id) const {
     }
 }
 
-std::unordered_set<int>::iterator SearchServer::begin() {
+std::set<int>::iterator SearchServer::begin() {
     return documents_.begin();
 }
 
-std::unordered_set<int>::iterator  SearchServer::end() {
+std::set<int>::iterator  SearchServer::end() {
     return documents_.end();
 }
 
-std::unordered_set<int>::const_iterator SearchServer::begin() const {
+std::set<int>::const_iterator SearchServer::begin() const {
     return documents_.cbegin();
 }
 
-std::unordered_set<int>::const_iterator SearchServer::end() const {
+std::set<int>::const_iterator SearchServer::end() const {
     return documents_.cend();
 }
 
