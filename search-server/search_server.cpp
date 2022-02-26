@@ -31,6 +31,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     const double kInvertedWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const std::string& word : kWords) {
         word_to_document_frequency_[word][document_id] += kInvertedWordCount;
+        document_to_word_frequency_[document_id][word] += kInvertedWordCount;
     }
 
     storage_.insert({document_id, DocumentData{ComputeAverageRating(ratings), status}});
@@ -178,4 +179,12 @@ std::vector<int>::const_iterator SearchServer::begin() const {
 
 std::vector<int>::const_iterator SearchServer::end() const {
     return documents_.cend();
+}
+
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    static const std::map<std::string , double> kEmptyMap{};
+    if (document_to_word_frequency_.count(document_id)) {
+        return document_to_word_frequency_.at(document_id);
+    }
+    return kEmptyMap;
 }

@@ -264,6 +264,26 @@ void TestIterateByConstServer() {
     }
 }
 
+void TestGetWordFrequencies() {
+    SearchServer server;
+    server.AddDocument(2, "alpha bravo charley delta"s, DocumentStatus::ACTUAL, {});
+    std::map<std::string, double> expected = {
+            {"alpha", 0.25},
+            {"bravo", 0.25},
+            {"charley", 0.25},
+            {"delta", 0.25}
+    };
+    const auto result = server.GetWordFrequencies(2);
+    for (auto& [word, frequency] : result) {
+        ASSERT(IsDoubleEqual(expected[word], frequency));
+    }
+}
+
+void TestGetWordFrequenciesWrongId() {
+    SearchServer server;
+    ASSERT(server.GetWordFrequencies(2).empty());
+}
+
 void TestSearchServer() {
     RUN_TEST(TestSearchOnEmptyBase);
     RUN_TEST(TestFoundAddedDocument);
@@ -283,5 +303,7 @@ void TestSearchServer() {
     RUN_TEST(TestSearchQueryValidation);
     RUN_TEST(TestIterateByServer);
     RUN_TEST(TestIterateByConstServer);
+    RUN_TEST(TestGetWordFrequenciesWrongId);
+    RUN_TEST(TestGetWordFrequencies);
     std::cerr << std::endl;
 }

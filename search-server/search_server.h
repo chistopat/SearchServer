@@ -53,6 +53,8 @@ class SearchServer {
 
     size_t GetDocumentCount() const;
 
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query,
                                                                        int document_id) const;
 
@@ -117,6 +119,7 @@ class SearchServer {
   private:
     std::set<std::string> stop_words_;
     std::unordered_map<std::string, std::unordered_map<int, double>> word_to_document_frequency_;
+    std::unordered_map<int, std::map<std::string , double>> document_to_word_frequency_;
     std::unordered_map<int, DocumentData> storage_;
     std::vector<int> documents_;
 };
