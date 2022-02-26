@@ -10,6 +10,7 @@
 #include <map>
 #include <cmath>
 #include <algorithm>
+#include <unordered_map>
 
 
 class SearchServer {
@@ -115,7 +116,7 @@ class SearchServer {
 
   private:
     std::set<std::string> stop_words_;
-    std::map<std::string, std::map<int, double>> word_to_document_frequency_;
+    std::unordered_map<std::string, std::unordered_map<int, double>> word_to_document_frequency_;
     std::map<int, DocumentData> storage_;
     std::vector<int> documents_;
 };
