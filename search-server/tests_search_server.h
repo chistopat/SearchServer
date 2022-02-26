@@ -239,19 +239,6 @@ void TestSearchQueryValidation() {
     ASSERT_EQUAL(server.FindTopDocuments("alpha"s).size(), 1U);
 }
 
-void TestGetDocumentId() {
-    SearchServer server;
-    server.AddDocument(1, "alpha"s, DocumentStatus::ACTUAL, {});
-    server.AddDocument(2, "bravo"s, DocumentStatus::ACTUAL, {});
-    server.AddDocument(3, "charley"s, DocumentStatus::ACTUAL, {});
-
-    ASSERT_EQUAL(server.GetDocumentId(2), 3);
-    ASSERT_EQUAL(server.GetDocumentId(0), 1);
-
-    CheckThrow<out_of_range>([&server]() { server.GetDocumentId(-1); });
-    CheckThrow<out_of_range>([&server]() { server.GetDocumentId(42); });
-}
-
 void TestIterateByServer() {
     SearchServer server;
     server.AddDocument(1, "alpha"s, DocumentStatus::ACTUAL, {});
@@ -294,7 +281,6 @@ void TestSearchServer() {
     RUN_TEST(TestConstuctorParametersValidation);
     RUN_TEST(TestAddDocumentValidation);
     RUN_TEST(TestSearchQueryValidation);
-    RUN_TEST(TestGetDocumentId);
     RUN_TEST(TestIterateByServer);
     RUN_TEST(TestIterateByConstServer);
     std::cerr << std::endl;

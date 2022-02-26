@@ -164,10 +164,6 @@ void SearchServer::CheckDocumentId(int document_id) const {
     }
 }
 
-int SearchServer::GetDocumentId(int index) const {
-    return documents_.at(index);
-}
-
 std::vector<int>::iterator SearchServer::begin() {
     return documents_.begin();
 }

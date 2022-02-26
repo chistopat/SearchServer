@@ -55,8 +55,6 @@ class SearchServer {
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query,
                                                                        int document_id) const;
 
-    int GetDocumentId(int index) const;
-
   private:
     struct DocumentData {
         int rating;
