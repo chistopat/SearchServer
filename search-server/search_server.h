@@ -11,6 +11,7 @@
 #include <cmath>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 
 class SearchServer {
@@ -33,10 +34,13 @@ class SearchServer {
     explicit SearchServer(const std::string& stop_words_text)
         : SearchServer(SplitIntoWords(stop_words_text)) {}
 
-    std::vector<int>::iterator begin();
-    std::vector<int>::iterator end();
-    std::vector<int>::const_iterator begin() const;
-    std::vector<int>::const_iterator end() const;
+    std::unordered_set<int>::iterator begin();
+
+    std::unordered_set<int>::iterator end();
+
+    std::unordered_set<int>::const_iterator begin() const;
+
+    std::unordered_set<int>::const_iterator end() const;
 
   public:
     void SetStopWords(const std::string& text);
@@ -54,6 +58,8 @@ class SearchServer {
     size_t GetDocumentCount() const;
 
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
+    void RemoveDocument(int document_id);
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query,
                                                                        int document_id) const;
@@ -121,7 +127,7 @@ class SearchServer {
     std::unordered_map<std::string, std::unordered_map<int, double>> word_to_document_frequency_;
     std::unordered_map<int, std::map<std::string , double>> document_to_word_frequency_;
     std::unordered_map<int, DocumentData> storage_;
-    std::vector<int> documents_;
+    std::unordered_set<int> documents_;
 };
 
 template<typename Predicate>

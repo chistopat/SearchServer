@@ -26,7 +26,6 @@ void SearchServer::SetStopWords(const std::string& text) {
 void SearchServer::AddDocument(int document_id, const std::string& document, DocumentStatus status,
                                const std::vector<int>& ratings) {
     CheckDocumentId(document_id);
-    documents_.push_back(document_id);
     const std::vector<std::string> kWords = SplitIntoWordsNoStop(document);
     const double kInvertedWordCount = 1.0 / static_cast<double>(kWords.size());
     for (const std::string& word : kWords) {
@@ -165,19 +164,19 @@ void SearchServer::CheckDocumentId(int document_id) const {
     }
 }
 
-std::vector<int>::iterator SearchServer::begin() {
+std::unordered_set<int>::iterator SearchServer::begin() {
     return documents_.begin();
 }
 
-std::vector<int>::iterator  SearchServer::end() {
+std::unordered_set<int>::iterator  SearchServer::end() {
     return documents_.end();
 }
 
-std::vector<int>::const_iterator SearchServer::begin() const {
+std::unordered_set<int>::const_iterator SearchServer::begin() const {
     return documents_.cbegin();
 }
 
-std::vector<int>::const_iterator SearchServer::end() const {
+std::unordered_set<int>::const_iterator SearchServer::end() const {
     return documents_.cend();
 }
 
@@ -187,4 +186,22 @@ const std::map<std::string, double>& SearchServer::GetWordFrequencies(int docume
         return document_to_word_frequency_.at(document_id);
     }
     return kEmptyMap;
+}
+
+
+void SearchServer::RemoveDocument(int document_id) {
+    if (!documents_.count(document_id)) {
+        return;
+    }
+
+    for (const auto& [word, _] : document_to_word_frequency_[document_id]) {
+        word_to_document_frequency_[word].erase(document_id);
+        if (word_to_document_frequency_[word].empty()) {
+            word_to_document_frequency_.erase(word);
+        }
+    }
+
+    storage_.erase(document_id);
+    documents_.erase(document_id);
+    document_to_word_frequency_.erase(document_id);
 }
