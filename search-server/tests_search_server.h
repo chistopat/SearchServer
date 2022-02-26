@@ -127,7 +127,7 @@ void TestDocumentsSortingByRelevance() {
     const auto kResults = server.FindTopDocuments(kQuery);
 
     ASSERT_HINT(is_sorted(kResults.cbegin(), kResults.cend(),
-                          [](const auto& left, const auto& right) { return left.relevance > right.relevance; }),
+                          [](const auto &left, const auto &right) { return left.relevance > right.relevance; }),
                 "documents must be sorted by relevance"s);
     ASSERT_EQUAL(kResults.size(), 4U);
 }
@@ -154,7 +154,7 @@ void TestSearchByUserPredicate() {
     server.AddDocument(5, string{"oh la la"}, DocumentStatus::REMOVED, {5});
 
     const auto kByUserDefined = [](int document_id, DocumentStatus document_status, int rating) {
-      return document_status == DocumentStatus::ACTUAL && rating < 3 && document_id % 2 == 0;
+        return document_status == DocumentStatus::ACTUAL && rating < 3 && document_id % 2 == 0;
     };
 
     ASSERT_EQUAL(server.FindTopDocuments(kQuery, kByUserDefined).front().id, 2);
@@ -215,14 +215,14 @@ void TestAddDocumentValidation() {
     CheckThrow<invalid_argument>([&server]() { server.AddDocument(-1, {}, DocumentStatus::ACTUAL, {}); });
 
     CheckThrow<invalid_argument>(
-        [&server]() {
-          server.AddDocument(1, {}, DocumentStatus::ACTUAL, {});
-          server.AddDocument(1, {}, DocumentStatus::ACTUAL, {});
-        }
+            [&server]() {
+                server.AddDocument(1, {}, DocumentStatus::ACTUAL, {});
+                server.AddDocument(1, {}, DocumentStatus::ACTUAL, {});
+            }
     );
 
     CheckThrow<invalid_argument>(
-        [&server]() { server.AddDocument(1, "al\x12pha bravo cha\x24rley delta"s, DocumentStatus::ACTUAL, {}); }
+            [&server]() { server.AddDocument(1, "al\x12pha bravo cha\x24rley delta"s, DocumentStatus::ACTUAL, {}); }
     );
 
     server.AddDocument(2, "alpha bravo charley delta"s, DocumentStatus::ACTUAL, {});
@@ -246,7 +246,7 @@ void TestIterateByServer() {
     server.AddDocument(3, "charley"s, DocumentStatus::ACTUAL, {});
 
     int counter = 0;
-    for (const auto kId : server) {
+    for (const auto kId: server) {
         ASSERT_EQUAL(kId, ++counter);
     }
 }
@@ -257,9 +257,9 @@ void TestIterateByConstServer() {
     server.AddDocument(2, "bravo"s, DocumentStatus::ACTUAL, {});
     server.AddDocument(3, "charley"s, DocumentStatus::ACTUAL, {});
 
-    const auto& kServer = server;
+    const auto &kServer = server;
     int counter = 0;
-    for (const auto kId : kServer) {
+    for (const auto kId: kServer) {
         ASSERT_EQUAL(kId, ++counter);
     }
 }
@@ -268,13 +268,13 @@ void TestGetWordFrequencies() {
     SearchServer server;
     server.AddDocument(2, "alpha bravo charley delta"s, DocumentStatus::ACTUAL, {});
     std::map<std::string, double> expected = {
-            {"alpha", 0.25},
-            {"bravo", 0.25},
+            {"alpha",   0.25},
+            {"bravo",   0.25},
             {"charley", 0.25},
-            {"delta", 0.25}
+            {"delta",   0.25}
     };
     const auto result = server.GetWordFrequencies(2);
-    for (auto& [word, frequency] : result) {
+    for (auto&[word, frequency]: result) {
         ASSERT(IsDoubleEqual(expected[word], frequency));
     }
 }

@@ -8,7 +8,7 @@ int main() {
     SearchServer search_server("and with"s);
 
     search_server.AddDocument(1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, {7, 2, 7});
-    search_server.AddDocument( 2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, {1, 2});
+    search_server.AddDocument(2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, {1, 2});
 
     // дубликат документа 2, будет удалён
     search_server.AddDocument(3, "funny pet with curly hair"s, DocumentStatus::ACTUAL, {1, 2});

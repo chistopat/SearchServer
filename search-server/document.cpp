@@ -2,10 +2,10 @@
 
 
 Document::Document(int id, double relevance, int rating)
-    : id(id), relevance(relevance), rating(rating) {
+        : id(id), relevance(relevance), rating(rating) {
 }
 
-std::ostream& operator<<(std::ostream& os, const Document& document) {
+std::ostream &operator<<(std::ostream &os, const Document &document) {
     os << "{ "s
        << "document_id = "s << document.id << ", "s
        << "relevance = "s << document.relevance << ", "s
@@ -19,13 +19,13 @@ bool IsDoubleEqual(double left, double right) {
     return std::abs(left - right) < kEpsilon;
 }
 
-bool operator<(const Document& left, const Document& right) {
+bool operator<(const Document &left, const Document &right) {
     if (IsDoubleEqual(left.relevance, right.relevance)) {
         return left.rating > right.rating;
     }
     return left.relevance > right.relevance;
 }
 
-std::ostream& operator<<(std::ostream& os, DocumentStatus status) {
+std::ostream &operator<<(std::ostream &os, DocumentStatus status) {
     return os << static_cast<int>(status);
 }

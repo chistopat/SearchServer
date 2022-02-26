@@ -1,34 +1,34 @@
 #include "search_server.h"
 
 
-const std::set<std::string>& SearchServer::Query::GetPlusWords() const {
+const std::set<std::string> &SearchServer::Query::GetPlusWords() const {
     return plus_words_;
 }
 
-std::set<std::string>& SearchServer::Query::GetPlusWords() {
+std::set<std::string> &SearchServer::Query::GetPlusWords() {
     return plus_words_;
 }
 
-const std::set<std::string>& SearchServer::Query::GetMinusWords() const {
+const std::set<std::string> &SearchServer::Query::GetMinusWords() const {
     return minus_words_;
 }
 
-std::set<std::string>& SearchServer::Query::GetMinusWords() {
+std::set<std::string> &SearchServer::Query::GetMinusWords() {
     return minus_words_;
 }
 
-void SearchServer::SetStopWords(const std::string& text) {
-    for (const std::string& word : SplitIntoWords(text)) {
+void SearchServer::SetStopWords(const std::string &text) {
+    for (const std::string &word: SplitIntoWords(text)) {
         stop_words_.insert(word);
     }
 }
 
-void SearchServer::AddDocument(int document_id, const std::string& document, DocumentStatus status,
-                               const std::vector<int>& ratings) {
+void SearchServer::AddDocument(int document_id, const std::string &document, DocumentStatus status,
+                               const std::vector<int> &ratings) {
     CheckDocumentId(document_id);
     const std::vector<std::string> kWords = SplitIntoWordsNoStop(document);
     const double kInvertedWordCount = 1.0 / static_cast<double>(kWords.size());
-    for (const std::string& word : kWords) {
+    for (const std::string &word: kWords) {
         word_to_document_frequency_[word][document_id] += kInvertedWordCount;
         document_to_word_frequency_[document_id][word] += kInvertedWordCount;
     }
@@ -36,22 +36,22 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     storage_.insert({document_id, DocumentData{ComputeAverageRating(ratings), status}});
 }
 
-std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {
+std::vector<Document> SearchServer::FindTopDocuments(const std::string &raw_query, DocumentStatus status) const {
     return FindTopDocuments(raw_query, [&status](int, DocumentStatus document_status, int) {
-      return document_status == status;
+        return document_status == status;
     });
 }
 
-std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query) const {
+std::vector<Document> SearchServer::FindTopDocuments(const std::string &raw_query) const {
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 
-std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query,
+std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string &raw_query,
                                                                                  int document_id) const {
     const Query kQuery = ParseQuery(raw_query);
     std::vector<std::string> matched_words;
 
-    for (const std::string& word : kQuery.GetPlusWords()) {
+    for (const std::string &word: kQuery.GetPlusWords()) {
         if (word_to_document_frequency_.count(word) == 1U) {
             if (word_to_document_frequency_.at(word).count(document_id) == 1U) {
                 matched_words.push_back(word);
@@ -59,7 +59,7 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
         }
     }
 
-    for (const std::string& word : kQuery.GetMinusWords()) {
+    for (const std::string &word: kQuery.GetMinusWords()) {
         if (word_to_document_frequency_.count(word) == 1U) {
             if (word_to_document_frequency_.at(word).count(document_id) == 1U) {
                 matched_words.clear();
@@ -76,13 +76,13 @@ size_t SearchServer::GetDocumentCount() const {
     return storage_.size();
 }
 
-bool SearchServer::IsStopWord(const std::string& word) const {
+bool SearchServer::IsStopWord(const std::string &word) const {
     return stop_words_.count(word) > 0U;
 }
 
-std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& text) const {
+std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string &text) const {
     std::vector<std::string> words;
-    for (const std::string& word : SplitIntoWords(text)) {
+    for (const std::string &word: SplitIntoWords(text)) {
         if (!IsStopWord(word)) {
             words.push_back(word);
         }
@@ -93,12 +93,12 @@ std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& t
     return words;
 }
 
-int SearchServer::ComputeAverageRating(const std::vector<int>& ratings) {
+int SearchServer::ComputeAverageRating(const std::vector<int> &ratings) {
     if (ratings.empty()) {
         return 0;
     }
     int rating_sum = 0;
-    for (const int kRating : ratings) {
+    for (const int kRating: ratings) {
         rating_sum += kRating;
     }
     return rating_sum / static_cast<int>(ratings.size());
@@ -120,9 +120,9 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(std::string text) const {
     return result;
 }
 
-SearchServer::Query SearchServer::ParseQuery(const std::string& text) const {
+SearchServer::Query SearchServer::ParseQuery(const std::string &text) const {
     Query query;
-    for (const std::string& word : SplitIntoWords(text)) {
+    for (const std::string &word: SplitIntoWords(text)) {
         const QueryWord kQueryWord = ParseQueryWord(word);
         if (!kQueryWord.is_stop) {
             if (kQueryWord.is_minus) {
@@ -135,23 +135,23 @@ SearchServer::Query SearchServer::ParseQuery(const std::string& text) const {
     return query;
 }
 
-double SearchServer::ComputeWordInverseDocumentFrequency(const std::string& word) const {
+double SearchServer::ComputeWordInverseDocumentFrequency(const std::string &word) const {
     return log(
-        static_cast<double>(GetDocumentCount()) / static_cast<double>(word_to_document_frequency_.at(word).size()));
+            static_cast<double>(GetDocumentCount()) / static_cast<double>(word_to_document_frequency_.at(word).size()));
 }
 
-std::vector<Document> SearchServer::MakeDocuments(const std::map<int, double>& document_to_relevance) const {
+std::vector<Document> SearchServer::MakeDocuments(const std::map<int, double> &document_to_relevance) const {
     std::vector<Document> documents;
     documents.reserve(document_to_relevance.size());
 
-    for (const auto[kDocumentId, kRelevance] : document_to_relevance) {
+    for (const auto[kDocumentId, kRelevance]: document_to_relevance) {
         documents.emplace_back(Document{kDocumentId, kRelevance, storage_.at(kDocumentId).rating});
     }
 
     return documents;
 }
 
-bool SearchServer::IsValidWord(const std::string& word) {
+bool SearchServer::IsValidWord(const std::string &word) {
     return std::none_of(word.begin(), word.end(), [](char ch) { return std::iscntrl(ch); });
 }
 
@@ -168,7 +168,7 @@ std::set<int>::iterator SearchServer::begin() {
     return documents_.begin();
 }
 
-std::set<int>::iterator  SearchServer::end() {
+std::set<int>::iterator SearchServer::end() {
     return documents_.end();
 }
 
@@ -180,8 +180,8 @@ std::set<int>::const_iterator SearchServer::end() const {
     return documents_.cend();
 }
 
-const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
-    static const std::map<std::string , double> kEmptyMap{};
+const std::map<std::string, double> &SearchServer::GetWordFrequencies(int document_id) const {
+    static const std::map<std::string, double> kEmptyMap{};
     if (document_to_word_frequency_.count(document_id)) {
         return document_to_word_frequency_.at(document_id);
     }
@@ -194,7 +194,7 @@ void SearchServer::RemoveDocument(int document_id) {
         return;
     }
 
-    for (const auto& [word, _] : document_to_word_frequency_[document_id]) {
+    for (const auto&[word, _]: document_to_word_frequency_[document_id]) {
         word_to_document_frequency_[word].erase(document_id);
         if (word_to_document_frequency_[word].empty()) {
             word_to_document_frequency_.erase(word);

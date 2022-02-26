@@ -11,13 +11,13 @@
 using namespace std::string_literals;
 
 template<typename Key, typename Value>
-std::ostream& operator<<(std::ostream& output_stream, const std::pair<Key, Value>& container) {
+std::ostream &operator<<(std::ostream &output_stream, const std::pair<Key, Value> &container) {
     return output_stream << container.first << ": "s << container.second;
 }
 
 template<typename Container>
-std::ostream& PrintContainer(std::ostream& output_stream, const Container& container, std::string&& prefix,
-                             std::string&& suffix, std::string&& delimiter = ", "s) {
+std::ostream &PrintContainer(std::ostream &output_stream, const Container &container, std::string &&prefix,
+                             std::string &&suffix, std::string &&delimiter = ", "s) {
     using namespace std::experimental;
 
     output_stream << prefix;
@@ -27,24 +27,24 @@ std::ostream& PrintContainer(std::ostream& output_stream, const Container& conta
 }
 
 template<typename Type>
-std::ostream& operator<<(std::ostream& output_stream, const std::vector<Type>& container) {
+std::ostream &operator<<(std::ostream &output_stream, const std::vector<Type> &container) {
     return PrintContainer(output_stream, container, "["s, "]"s);
 }
 
 template<typename Type>
-std::ostream& operator<<(std::ostream& output_stream, const std::set<Type>& container) {
+std::ostream &operator<<(std::ostream &output_stream, const std::set<Type> &container) {
     return PrintContainer(output_stream, container, "{"s, "}"s);
 }
 
 template<typename Key, typename Value>
-std::ostream& operator<<(std::ostream& output_stream, const std::map<Key, Value>& container) {
+std::ostream &operator<<(std::ostream &output_stream, const std::map<Key, Value> &container) {
     return PrintContainer(output_stream, container, "{"s, "}"s);
 }
 
 template<typename Actual, typename Expected>
-void AssertEqual(const Actual& actual, const Expected& expected,
-                 const std::string& actual_string, const std::string& expected_string, const std::string& file,
-                 const std::string& function, unsigned line, const std::string& hint) {
+void AssertEqual(const Actual &actual, const Expected &expected,
+                 const std::string &actual_string, const std::string &expected_string, const std::string &file,
+                 const std::string &function, unsigned line, const std::string &hint) {
     if (!(actual == expected)) {
         std::cout << std::boolalpha;
         std::cout << file << "("s << line << "): "s << function << ": "s;
@@ -58,17 +58,17 @@ void AssertEqual(const Actual& actual, const Expected& expected,
     }
 }
 
-void Assert(bool value, const std::string& value_string, const std::string& file, const std::string& function,
-            unsigned line, const std::string& hint) {
+void Assert(bool value, const std::string &value_string, const std::string &file, const std::string &function,
+            unsigned line, const std::string &hint) {
     AssertEqual(value, true, value_string, "true", file, function, line, hint);
 }
 
 template<typename TestFunc>
-void RunTest(TestFunc function, const std::string& test_name) {
+void RunTest(TestFunc function, const std::string &test_name) {
     try {
         function();
         std::cerr << test_name << " OK" << std::endl;
-    } catch (std::exception& e) {
+    } catch (std::exception &e) {
         std::cerr << test_name << " Fail: " << e.what() << std::endl;
     }
 }
@@ -89,7 +89,7 @@ template<typename Exception, typename Function>
 void CheckThrow(Function func) {
     try {
         func();
-    } catch (const Exception& e) {
+    } catch (const Exception &e) {
         ASSERT_HINT(true, e.what());
         return;
     } catch (...) {

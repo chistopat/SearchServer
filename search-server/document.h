@@ -13,9 +13,9 @@ struct Document {
     int rating;
 };
 
-std::ostream& operator<<(std::ostream& os, const Document& document);
+std::ostream &operator<<(std::ostream &os, const Document &document);
 
-bool operator<(const Document& left, const Document& right);
+bool operator<(const Document &left, const Document &right);
 
 enum class DocumentStatus {
     ACTUAL,
@@ -24,6 +24,6 @@ enum class DocumentStatus {
     REMOVED,
 };
 
-std::ostream& operator<<(std::ostream& os, DocumentStatus status);
+std::ostream &operator<<(std::ostream &os, DocumentStatus status);
 
 bool IsDoubleEqual(double left, double right);
