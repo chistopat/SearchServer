@@ -32,6 +32,11 @@ class SearchServer {
     explicit SearchServer(const std::string& stop_words_text)
         : SearchServer(SplitIntoWords(stop_words_text)) {}
 
+    std::vector<int>::iterator begin();
+    std::vector<int>::iterator end();
+    std::vector<int>::const_iterator begin() const;
+    std::vector<int>::const_iterator end() const;
+
   public:
     void SetStopWords(const std::string& text);
 

@@ -252,6 +252,31 @@ void TestGetDocumentId() {
     CheckThrow<out_of_range>([&server]() { server.GetDocumentId(42); });
 }
 
+void TestIterateByServer() {
+    SearchServer server;
+    server.AddDocument(1, "alpha"s, DocumentStatus::ACTUAL, {});
+    server.AddDocument(2, "bravo"s, DocumentStatus::ACTUAL, {});
+    server.AddDocument(3, "charley"s, DocumentStatus::ACTUAL, {});
+
+    int counter = 0;
+    for (const auto kId : server) {
+        ASSERT_EQUAL(kId, ++counter);
+    }
+}
+
+void TestIterateByConstServer() {
+    SearchServer server;
+    server.AddDocument(1, "alpha"s, DocumentStatus::ACTUAL, {});
+    server.AddDocument(2, "bravo"s, DocumentStatus::ACTUAL, {});
+    server.AddDocument(3, "charley"s, DocumentStatus::ACTUAL, {});
+
+    const auto& kServer = server;
+    int counter = 0;
+    for (const auto kId : kServer) {
+        ASSERT_EQUAL(kId, ++counter);
+    }
+}
+
 void TestSearchServer() {
     RUN_TEST(TestSearchOnEmptyBase);
     RUN_TEST(TestFoundAddedDocument);
@@ -270,5 +295,7 @@ void TestSearchServer() {
     RUN_TEST(TestAddDocumentValidation);
     RUN_TEST(TestSearchQueryValidation);
     RUN_TEST(TestGetDocumentId);
+    RUN_TEST(TestIterateByServer);
+    RUN_TEST(TestIterateByConstServer);
     std::cerr << std::endl;
 }
