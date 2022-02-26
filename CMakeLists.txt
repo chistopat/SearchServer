@@ -13,4 +13,4 @@ add_executable(
         search-server/read_input_functions.cpp
         search-server/string_processing.cpp
         search-server/request_queue.cpp
-)
+        search-server/log_duration.h)
