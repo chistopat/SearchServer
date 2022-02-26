@@ -117,7 +117,7 @@ class SearchServer {
   private:
     std::set<std::string> stop_words_;
     std::unordered_map<std::string, std::unordered_map<int, double>> word_to_document_frequency_;
-    std::map<int, DocumentData> storage_;
+    std::unordered_map<int, DocumentData> storage_;
     std::vector<int> documents_;
 };
 
